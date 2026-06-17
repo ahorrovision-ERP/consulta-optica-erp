@@ -3,6 +3,14 @@ function Sidebar() {
   return (
     <aside className="sidebar">
 
+      <div className="logo-container">
+
+    <img
+      src={logo}
+      className="logo"
+      alt="Ahorro Vision"
+    />
+        
       <h1>AHORRO VISION ERP</h1>
       <p>Optical Management</p>
 
