@@ -14,9 +14,9 @@ function Sidebar() {
   }}
 />
 
-    <h1>Ahorro Visión ERP</h1>
+   <h1>Ahorro Visión ERP</h1>
 
-    <p>Sistema de Gestión Óptica</p>
+<p>Sistema de Gestión Óptica</p>
 
 </div>
 
@@ -40,7 +40,8 @@ function Sidebar() {
           <li>Ventas</li>
         </ul>
       </div>
-
+Sucursales: Ñuñoa - Macul
+Usuario: Administrador
     </aside>
   );
 }
