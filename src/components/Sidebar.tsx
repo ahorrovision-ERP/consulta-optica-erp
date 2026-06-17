@@ -5,11 +5,14 @@ function Sidebar() {
 
      <div className="logo-container">
 
-    <img
-      src={logo}
-      className="logo"
-      alt="Ahorro Vision"
-    />
+     <img
+  src="/logo.png"
+  style={{
+    width: "180px",
+    display: "block",
+    margin: "20px auto"
+  }}
+/>
 
     <h1>Ahorro Visión ERP</h1>
 
