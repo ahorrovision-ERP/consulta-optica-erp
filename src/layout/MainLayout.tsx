@@ -9,14 +9,7 @@ function MainLayout({ children }: Props) {
     <div className="container">
      
       <Sidebar />
- <img
-  src="/logo.png"
-  style={{
-    width: "180px",
-    display: "block",
-    margin: "20px auto"
-  }}
-/>
+ 
       <main className="contenido">
         {children}
       </main>
