@@ -7,6 +7,14 @@ type Props = {
 function MainLayout({ children }: Props) {
   return (
     <div className="container">
+      <img
+  src="/logo.png"
+  style={{
+    width: "180px",
+    display: "block",
+    margin: "20px auto"
+  }}
+/>
 
       <Sidebar />
 
