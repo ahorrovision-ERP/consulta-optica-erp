@@ -1,8 +1,9 @@
+import logo from "../assets/logo.png";
 function Sidebar() {
   return (
     <aside className="sidebar">
 
-      <h1>VisionPro ERP</h1>
+      <h1>AHORRO VISION ERP</h1>
       <p>Optical Management</p>
 
       <div className="grupo">
