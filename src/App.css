@@ -9,13 +9,32 @@ body{
 }
 
 .sidebar{
-  width:280px;
-  background:#5f5f5f;
-  color:white;
-  min-height:100vh;
-  padding:20px;
+    width:280px;
+    min-height:100vh;
+    background:#5b5b5b;
+    color:white;
+    padding:25px;
 }
 
+.logo-container{
+    text-align:center;
+    margin-bottom:50px;
+}
+
+.logo{
+    width:170px;
+    margin-bottom:20px;
+}
+
+.logo-container h1{
+    font-size:32px;
+    margin-bottom:10px;
+}
+
+.logo-container p{
+    color:#d9d9d9;
+    font-size:15px;
+}
 .sidebar h1{
   font-size:3rem;
 }
@@ -39,10 +58,20 @@ body{
 }
 
 .grupo li{
-  padding:18px;
-  margin-top:10px;
-  cursor:pointer;
-  border-radius:15px;
+    padding:18px;
+    margin-top:12px;
+    cursor:pointer;
+    border-radius:15px;
+    transition:.3s;
+}
+
+.grupo li:hover{
+    background:#767676;
+}
+
+.grupo li:first-child{
+    background:#747474;
+    border-left:5px solid #c40018;
 }
 
 .grupo li:hover{
