@@ -1,1 +1,108 @@
+.sidebar{
+    width:280px;
+    background:#555555;
+    color:white;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+    padding:25px;
+}
 
+/* ---------- LOGO ---------- */
+
+.logo-container{
+    text-align:center;
+}
+
+.logo{
+    width:180px;
+    margin-bottom:20px;
+}
+
+.logo-container h1{
+    font-size:52px;
+    font-weight:700;
+    line-height:1;
+    margin-bottom:15px;
+}
+
+.subtitle{
+    color:#d5d5d5;
+    font-size:20px;
+}
+
+/* ---------- TITULOS ---------- */
+
+.grupo{
+    margin-top:40px;
+}
+
+.grupo h4{
+    color:#bdbdbd;
+    font-size:18px;
+    margin-bottom:20px;
+}
+
+/* ---------- MENU ---------- */
+
+.grupo ul{
+    list-style:none;
+    padding:0;
+}
+
+.grupo li{
+    padding:18px 20px;
+    margin-bottom:15px;
+    border-radius:18px;
+    cursor:pointer;
+    font-size:24px;
+    transition:0.3s;
+}
+
+.grupo li:hover{
+    background:#6a6a6a;
+}
+
+.active{
+    background:#727272;
+    border-left:6px solid #cc001f;
+}
+
+/* ---------- PIE ---------- */
+
+.sidebar-footer{
+    margin-top:60px;
+}
+
+.branch-card{
+    background:#4b4b4b;
+    border-radius:20px;
+    padding:18px;
+    display:flex;
+    align-items:center;
+    gap:15px;
+}
+
+.branch-icon{
+    width:50px;
+    height:50px;
+    border-radius:50%;
+    background:#cc001f;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    font-size:24px;
+}
+
+.user-info{
+    margin-top:25px;
+}
+
+.user-info strong{
+    font-size:20px;
+}
+
+.user-info p{
+    color:#d5d5d5;
+}
