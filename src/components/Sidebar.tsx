@@ -8,10 +8,10 @@ function Sidebar() {
       <div className="logo-container">
 
         <img
-          src="/logo.png"
-          alt="Óptica Ahorro Visión"
-          className="logo"
-        />
+  src={logo}
+  alt="Óptica Ahorro Visión"
+  className="logo"
+/>
 
         <h1>Ahorro Visión ERP</h1>
 
