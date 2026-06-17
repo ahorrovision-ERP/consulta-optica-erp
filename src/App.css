@@ -72,3 +72,24 @@ body{
   color:#c60019;
   font-size:3rem;
 }
+
+.logo-container{
+    text-align:center;
+    margin-bottom:40px;
+}
+
+.logo{
+    width:160px;
+    margin-bottom:15px;
+}
+
+.logo-container h1{
+    color:white;
+    font-size:2rem;
+    margin-bottom:10px;
+}
+
+.logo-container p{
+    color:#d4d4d4;
+    font-size:14px;
+}
