@@ -1,17 +1,18 @@
 import "./Sidebar.css";
+import logo from "../assets/logo.png";
 
 function Sidebar() {
   return (
     <aside className="sidebar">
 
-      {/* Logo */}
+      {/* LOGO */}
       <div className="logo-container">
 
         <img
-  src={logo}
-  alt="Óptica Ahorro Visión"
-  className="logo"
-/>
+          src={logo}
+          alt="Óptica Ahorro Visión"
+          className="logo"
+        />
 
         <h1>Ahorro Visión ERP</h1>
 
@@ -21,75 +22,66 @@ function Sidebar() {
 
       </div>
 
-      {/* Menú General */}
+
+      {/* GENERAL */}
       <div className="grupo">
 
         <h4>GENERAL</h4>
 
         <ul>
 
-          <li className="active">
-            Dashboard
-          </li>
+          <li className="active">Dashboard</li>
 
-          <li>
-            Pacientes
-          </li>
+          <li>Pacientes</li>
 
-          <li>
-            Agenda
-          </li>
+          <li>Agenda</li>
 
-          <li>
-            Historia Clínica
-          </li>
+          <li>Historia Clínica</li>
 
         </ul>
 
       </div>
 
-      {/* Inventario */}
+
+      {/* INVENTARIO */}
       <div className="grupo">
 
         <h4>INVENTARIO Y VENTAS</h4>
 
         <ul>
 
-          <li>
-            Recetas
-          </li>
+          <li>Recetas</li>
 
-          <li>
-            Órdenes
-          </li>
+          <li>Órdenes</li>
 
-          <li>
-            Ventas
-          </li>
+          <li>Ventas</li>
 
         </ul>
 
       </div>
 
-      {/* Pie */}
+
+      {/* FOOTER */}
       <div className="sidebar-footer">
 
         <div className="branch-card">
 
           <div className="branch-icon">
+
             🏪
+
           </div>
 
           <div>
 
             <strong>Óptica Ahorro Visión</strong>
-            
 
             <p>Ñuñoa - Macul</p>
 
           </div>
 
         </div>
+
 
         <div className="user-info">
 
