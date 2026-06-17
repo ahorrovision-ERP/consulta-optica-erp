@@ -40,8 +40,8 @@ function Sidebar() {
           <li>Ventas</li>
         </ul>
       </div>
-Sucursales: Ñuñoa - Macul
-Usuario: Administrador
+<p>Sucursales: Ñuñoa - Macul</p>p>
+<p>Usuario: Administrador</p>p>
     </aside>
   );
 }
