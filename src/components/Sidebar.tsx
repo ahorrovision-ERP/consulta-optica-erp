@@ -83,6 +83,7 @@ function Sidebar() {
           <div>
 
             <strong>Óptica Ahorro Visión</strong>
+            <strong>Óftalmologìa Quilin</strong>
 
             <p>Ñuñoa - Macul</p>
 
