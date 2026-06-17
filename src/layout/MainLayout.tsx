@@ -7,7 +7,9 @@ type Props = {
 function MainLayout({ children }: Props) {
   return (
     <div className="container">
-      <img
+     
+      <Sidebar />
+ <img
   src="/logo.png"
   style={{
     width: "180px",
@@ -15,9 +17,6 @@ function MainLayout({ children }: Props) {
     margin: "20px auto"
   }}
 />
-
-      <Sidebar />
-
       <main className="contenido">
         {children}
       </main>
