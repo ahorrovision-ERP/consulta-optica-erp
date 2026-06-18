@@ -52,17 +52,32 @@
 }
 
 .grupo li{
-    padding:18px 20px;
     margin-bottom:15px;
     border-radius:18px;
-    cursor:pointer;
-    font-size:18px;
     transition:0.3s;
 }
 
 .grupo li:hover{
     background:#6a6a6a;
 }
+
+.grupo li a{
+    display:block;
+    width:100%;
+    padding:18px 20px;
+
+    color:white;
+    text-decoration:none;
+
+    font-size:18px;
+    font-weight:500;
+}
+
+.grupo li a:hover{
+    color:white;
+}
+
+/* Elemento seleccionado */
 
 .active{
     background:#727272;
@@ -105,14 +120,4 @@
 
 .user-info p{
     color:#d5d5d5;
-}
-.grupo li a{
-    color:white;
-    text-decoration:none;
-    display:block;
-    width:100%;
-}
-
-.grupo li a:hover{
-    color:white;
 }
