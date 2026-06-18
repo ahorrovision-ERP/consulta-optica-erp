@@ -31,27 +31,32 @@ function Pacientes() {
       <SearchBar />
 
       <div
-        style={{
-          display: "flex",
-          justifyContent: "flex-end",
-          marginTop: "20px",
-          marginBottom: "20px"
-        }}
-      >
-        <button
-          style={{
-            background: "var(--primary-color)",
-            color: "white",
-            border: "none",
-            padding: "12px 20px",
-            borderRadius: "12px",
-            cursor: "pointer",
-            fontWeight: "bold"
-          }}
-        >
-          + Nuevo Paciente
-        </button>
-      </div>
+  style={{
+    display: "flex",
+    gap: "20px",
+    alignItems: "center",
+    marginBottom: "30px"
+  }}
+>
+  <div style={{ flex: 1 }}>
+    <SearchBar />
+  </div>
+
+  <button
+    style={{
+      background: "#cc001f",
+      color: "white",
+      border: "none",
+      padding: "16px 24px",
+      borderRadius: "15px",
+      fontSize: "16px",
+      fontWeight: "bold",
+      cursor: "pointer"
+    }}
+  >
+    + Nuevo Paciente
+  </button>
+</div>
 
       <DataTable
         columns={columnas}
