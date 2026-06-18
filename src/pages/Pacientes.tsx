@@ -35,23 +35,29 @@ function Pacientes() {
     .select("*")
     .order("id");
 
-  if (error) {
-    console.error(error);
-    return;
+  if (!error && data) {
+
+    const filas = data.map((p) => [
+
+      p.id?.toString() || "",
+
+      `${p.nombres} ${p.apellidos}`,
+
+      p.telefono || "",
+
+      p.edad?.toString() || "",
+
+      p.ciudad || "",
+
+      "✏️ 🗑️"
+
+    ]);
+
+    setPacientes(filas);
+
   }
 
-  const filas = data.map((p: any) => [
-    p.id?.toString(),
-    `${p.nombres} ${p.apellidos}`,
-    p.telefono || "",
-    p.edad?.toString() || "",
-    p.ciudad || "",
-    "✏️ 🗑️"
-  ]);
-
-  setPacientes(filas);
 }
-
   return (
     <MainLayout>
 
