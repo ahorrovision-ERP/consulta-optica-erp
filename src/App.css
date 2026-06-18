@@ -5,7 +5,8 @@ body{
 }
 
 .container{
-  display:flex;
+    display:flex;
+    min-height:100vh;
 }
 
 .sidebar{
