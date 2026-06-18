@@ -2,112 +2,67 @@ function PatientForm() {
   return (
     <form>
 
-      {/* Primera fila */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: "25px",
-          marginBottom: "25px"
-        }}
-      >
-        <div>
+      {/* FILA 1 */}
+      <div className="form-row">
+
+        <div className="form-group">
           <label>Nombre completo</label>
-
-          <input
-            type="text"
-            style={styles.input}
-          />
+          <input type="text" />
         </div>
 
-        <div>
+        <div className="form-group">
           <label>RUT</label>
-
-          <input
-            type="text"
-            style={styles.input}
-          />
+          <input type="text" />
         </div>
+
       </div>
 
-      {/* Segunda fila */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: "25px",
-          marginBottom: "25px"
-        }}
-      >
-        <div>
+
+      {/* FILA 2 */}
+      <div className="form-row">
+
+        <div className="form-group">
           <label>Teléfono</label>
-
-          <input
-            type="text"
-            style={styles.input}
-          />
+          <input type="text" />
         </div>
 
-        <div>
+        <div className="form-group">
           <label>Email</label>
-
-          <input
-            type="email"
-            style={styles.input}
-          />
+          <input type="email" />
         </div>
+
       </div>
 
-      {/* Tercera fila */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: "25px",
-          marginBottom: "25px"
-        }}
-      >
-        <div>
+
+      {/* FILA 3 */}
+      <div className="form-row">
+
+        <div className="form-group">
           <label>Ciudad</label>
-
-          <input
-            type="text"
-            style={styles.input}
-          />
+          <input type="text" />
         </div>
 
-        <div>
+        <div className="form-group">
           <label>Dirección</label>
-
-          <input
-            type="text"
-            style={styles.input}
-          />
+          <input type="text" />
         </div>
+
       </div>
 
-      {/* Observaciones */}
-      <div
-        style={{
-          marginBottom: "35px"
-        }}
-      >
+
+      {/* OBSERVACIONES */}
+
+      <div className="form-group">
         <label>Observaciones</label>
 
-        <textarea
-          rows={5}
-          style={styles.textarea}
-        />
+        <textarea rows={5}></textarea>
       </div>
 
-      {/* Botones */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "flex-end",
-          gap: "15px"
-        }}
-      >
+
+      {/* BOTONES */}
+
+      <div className="form-buttons">
+
         <button
           type="button"
           className="btn-secondary"
@@ -121,35 +76,11 @@ function PatientForm() {
         >
           Guardar Paciente
         </button>
+
       </div>
 
     </form>
   );
 }
-
-const styles = {
-
-  input: {
-    width: "100%",
-    padding: "14px 16px",
-    marginTop: "8px",
-    border: "1px solid #ddd",
-    borderRadius: "12px",
-    outline: "none",
-    fontSize: "15px"
-  },
-
-  textarea: {
-    width: "100%",
-    padding: "15px",
-    marginTop: "8px",
-    border: "1px solid #ddd",
-    borderRadius: "12px",
-    resize: "vertical" as const,
-    outline: "none",
-    fontSize: "15px"
-  }
-
-};
 
 export default PatientForm;
