@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useState, useEffect } from "react";
+import { supabase } from "../supabase";
 
 import MainLayout from "../layout/MainLayout";
 import PageHeader from "../components/PageHeader";
@@ -21,13 +23,34 @@ function Pacientes() {
     "Acciones"
   ];
 
-  const pacientes = [
-    ["1", "Juan Pérez", "+56 9 4567 8912", "45", "Santiago", "✏️ 🗑️"],
-    ["2", "María González", "+56 9 8123 4567", "29", "Macul", "✏️ 🗑️"],
-    ["3", "Pedro Ramírez", "+56 9 9988 7766", "61", "Ñuñoa", "✏️ 🗑️"],
-    ["4", "Elena García", "+56 9 4455 6677", "37", "Providencia", "✏️ 🗑️"],
-    ["5", "Carlos Muñoz", "+56 9 2233 8899", "52", "La Florida", "✏️ 🗑️"]
-  ];
+  const [pacientes, setPacientes] = useState<string[][]>([]);
+  useEffect(() => {
+  cargarPacientes();
+}, []);
+
+  async function cargarPacientes() {
+
+  const { data, error } = await supabase
+    .from("pacientes")
+    .select("*")
+    .order("id");
+
+  if (error) {
+    console.error(error);
+    return;
+  }
+
+  const filas = data.map((p: any) => [
+    p.id?.toString(),
+    `${p.nombres} ${p.apellidos}`,
+    p.telefono || "",
+    p.edad?.toString() || "",
+    p.ciudad || "",
+    "✏️ 🗑️"
+  ]);
+
+  setPacientes(filas);
+}
 
   return (
     <MainLayout>
