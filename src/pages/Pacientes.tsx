@@ -1,6 +1,6 @@
-import { useState } from "react";
 import { useState, useEffect } from "react";
-import { supabase } from "../supabase";
+// import { supabase } from "../supabase";
+import { supabase } from "../lib/supabase";
 
 import MainLayout from "../layout/MainLayout";
 import PageHeader from "../components/PageHeader";
