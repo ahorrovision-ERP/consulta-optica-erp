@@ -1,13 +1,13 @@
 import MainLayout from "../layout/MainLayout";
 
-function Recetas() {
+function Ordenes() {
   return (
     <MainLayout>
 
-      <h1>Recetas</h1>
+      <h1>Órdenes</h1>
 
     </MainLayout>
   );
 }
 
-export default Recetas;
+export default Ordenes;
