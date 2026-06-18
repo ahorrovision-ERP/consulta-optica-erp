@@ -1,15 +1,24 @@
 function SearchBar() {
   return (
-    <div className="card">
+    <div
+      style={{
+        background: "white",
+        borderRadius: "25px",
+        padding: "25px",
+        boxShadow: "0 5px 20px rgba(0,0,0,.1)"
+      }}
+    >
       <input
         type="text"
-        placeholder="Buscar..."
+        placeholder="Buscar paciente por nombre, teléfono o ID..."
         style={{
           width: "100%",
-          padding: "15px",
-          borderRadius: "12px",
+          padding: "16px",
+          borderRadius: "14px",
           border: "1px solid #ddd",
-          outline: "none"
+          fontSize: "16px",
+          outline: "none",
+          boxSizing: "border-box"
         }}
       />
     </div>
