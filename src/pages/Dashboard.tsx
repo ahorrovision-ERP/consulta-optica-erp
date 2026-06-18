@@ -1,15 +1,16 @@
 import MainLayout from "../layout/MainLayout";
-import StatCard from "../components/StatCard";
 import TopBar from "../components/TopBar";
+import StatCard from "../components/StatCard";
+import SalesChart from "../components/SalesChart";
 
 function Dashboard() {
   return (
     <MainLayout>
-<TopBar />
+      <TopBar />
+
       <h1>Dashboard Overview</h1>
 
       <div className="cards">
-
         <StatCard
           titulo="Total Pacientes"
           valor="1,284"
@@ -21,7 +22,7 @@ function Dashboard() {
         />
 
         <StatCard
-          titulo="Ordenes Pendientes"
+          titulo="Órdenes Pendientes"
           valor="42"
         />
 
@@ -29,9 +30,9 @@ function Dashboard() {
           titulo="Ingresos Mensuales"
           valor="$54,200"
         />
-
       </div>
 
+      <SalesChart />
     </MainLayout>
   );
 }
