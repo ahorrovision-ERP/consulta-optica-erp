@@ -5,7 +5,17 @@ interface DataTableProps {
 
 function DataTable({ columns, data }: DataTableProps) {
   return (
-    <div className="card">
+    <div
+      style={{
+        background: "white",
+        borderRadius: "25px",
+        padding: "30px",
+        boxShadow: "0 5px 20px rgba(0,0,0,.1)",
+        overflowX: "auto",
+        width: "100%",
+        boxSizing: "border-box"
+      }}
+    >
       <table
         style={{
           width: "100%",
@@ -20,7 +30,8 @@ function DataTable({ columns, data }: DataTableProps) {
                 style={{
                   textAlign: "left",
                   padding: "15px",
-                  borderBottom: "1px solid #ddd"
+                  borderBottom: "1px solid #ddd",
+                  fontWeight: "bold"
                 }}
               >
                 {column}
