@@ -97,3 +97,47 @@ td{
 .btn-secondary:hover{
     background:#f2f2f2;
 }
+/* ===== FORMULARIOS ===== */
+
+.form-row{
+    display:flex;
+    gap:40px;
+    margin-bottom:30px;
+}
+
+.form-group{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+}
+
+.form-group label{
+    margin-bottom:10px;
+    font-size:15px;
+    font-weight:500;
+    color:#444;
+}
+
+.form-group input{
+    padding:15px;
+    border:1px solid #ddd;
+    border-radius:12px;
+    font-size:15px;
+    outline:none;
+}
+
+.form-group textarea{
+    padding:15px;
+    border:1px solid #ddd;
+    border-radius:12px;
+    resize:none;
+    font-size:15px;
+    outline:none;
+}
+
+.form-buttons{
+    display:flex;
+    justify-content:flex-end;
+    gap:15px;
+    margin-top:35px;
+}
