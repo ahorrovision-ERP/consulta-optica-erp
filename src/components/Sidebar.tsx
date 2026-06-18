@@ -1,5 +1,6 @@
 import "./Sidebar.css";
 import logo from "../assets/logo.png";
+import { Link } from "react-router-dom";
 
 function Sidebar() {
   return (
@@ -30,13 +31,23 @@ function Sidebar() {
 
         <ul>
 
-          <li className="active">Dashboard</li>
+          <li>
+            <Link to="/">Dashboard</Link>
+          </li>
 
-          <li>Pacientes</li>
+          <li>
+            <Link to="/pacientes">Pacientes</Link>
+          </li>
 
-          <li>Agenda</li>
+          <li>
+            <Link to="/agenda">Agenda</Link>
+          </li>
 
-          <li>Historia Clínica</li>
+          <li>
+            <Link to="/historia-clinica">
+              Historia Clínica
+            </Link>
+          </li>
 
         </ul>
 
@@ -50,11 +61,23 @@ function Sidebar() {
 
         <ul>
 
-          <li>Recetas</li>
+          <li>
+            <Link to="/recetas">
+              Recetas
+            </Link>
+          </li>
 
-          <li>Órdenes</li>
+          <li>
+            <Link to="/ordenes">
+              Órdenes
+            </Link>
+          </li>
 
-          <li>Ventas</li>
+          <li>
+            <Link to="/ventas">
+              Ventas
+            </Link>
+          </li>
 
         </ul>
 
@@ -67,16 +90,18 @@ function Sidebar() {
         <div className="branch-card">
 
           <div className="branch-icon">
-
             🏪
-
           </div>
 
           <div>
 
-            <strong>Óptica Ahorro Visión</strong>
+            <strong>
+              Óptica Ahorro Visión
+            </strong>
 
-            <p>Ñuñoa - Macul</p>
+            <p>
+              Ñuñoa - Macul
+            </p>
 
           </div>
 
@@ -85,9 +110,13 @@ function Sidebar() {
 
         <div className="user-info">
 
-          <strong>Administrador</strong>
+          <strong>
+            Administrador
+          </strong>
 
-          <p>Perfil Principal</p>
+          <p>
+            Perfil Principal
+          </p>
 
         </div>
 
