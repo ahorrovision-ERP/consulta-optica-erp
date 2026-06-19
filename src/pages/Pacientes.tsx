@@ -126,7 +126,13 @@ async function eliminarPaciente(
 
         <button
           className="btn-primary"
-          onClick={() => setOpenModal(true)}
+          onClick={() => {
+
+  setPacienteSeleccionado(null);
+
+  setOpenModal(true);
+
+}}
         >
           + Nuevo
         </button>
@@ -151,14 +157,25 @@ async function eliminarPaciente(
       {/* Modal */}
       <PatientModal
   isOpen={openModal}
-  title="Nuevo Paciente"
+  title={
+  pacienteSeleccionado
+    ? "Editar Paciente"
+    : "Nuevo Paciente"
+}
   onClose={() => setOpenModal(false)}
 >
 
-  <PatientForm
-    onClose={() => setOpenModal(false)}
-    onPacienteGuardado={cargarPacientes}
-  />
+ <PatientForm
+  paciente={pacienteSeleccionado}
+  onClose={() => {
+
+    setOpenModal(false);
+
+    setPacienteSeleccionado(null);
+
+  }}
+  onPacienteGuardado={cargarPacientes}
+/>
 
 </PatientModal>
 
