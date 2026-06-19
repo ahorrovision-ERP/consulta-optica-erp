@@ -1,4 +1,3 @@
-```tsx
 interface DataTableProps {
   columns: string[];
   data: any[][];
@@ -156,4 +155,3 @@ function DataTable({
 }
 
 export default DataTable;
-```
