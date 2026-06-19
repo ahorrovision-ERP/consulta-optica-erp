@@ -12,6 +12,8 @@ import PatientForm from "../components/PatientForm";
 
 function Pacientes() {
 
+  const [pacienteSeleccionado, setPacienteSeleccionado] =
+  useState<any>(null);
   const [openModal, setOpenModal] = useState(false);
 
   const columnas = [
@@ -37,21 +39,21 @@ function Pacientes() {
 
   if (!error && data) {
 
-    const filas = data.map((p) => [
+   const filas = data.map((p) => [
 
-      p.id?.toString() || "",
+  p.id?.toString() || "",
 
-      `${p.nombres} ${p.apellidos}`,
+  `${p.nombres} ${p.apellidos}`,
 
-      p.telefono || "",
+  p.telefono || "",
 
-      p.edad?.toString() || "",
+  p.edad?.toString() || "",
 
-      p.ciudad || "",
+  p.ciudad || "",
 
-      "✏️ 🗑️"
+  p
 
-    ]);
+]);
 
     setPacientes(filas);
 
