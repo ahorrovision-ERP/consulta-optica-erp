@@ -142,9 +142,11 @@ async function eliminarPaciente(
       </div>
 
       <DataTable
-        columns={columnas}
-        data={pacientes}
-      />
+  columns={columnas}
+  data={pacientes}
+  onEditar={editarPaciente}
+  onEliminar={eliminarPaciente}
+/>
 
       {/* Modal */}
       <PatientModal
