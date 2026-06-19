@@ -105,12 +105,17 @@ function Pacientes() {
 
       {/* Modal */}
       <PatientModal
-        isOpen={openModal}
-        title="Nuevo Paciente"
-        onClose={() => setOpenModal(false)}
-      >
-        <PatientForm />
-      </PatientModal>
+  isOpen={openModal}
+  title="Nuevo Paciente"
+  onClose={() => setOpenModal(false)}
+>
+
+  <PatientForm
+    onClose={() => setOpenModal(false)}
+    onPacienteGuardado={cargarPacientes}
+  />
+
+</PatientModal>
 
     </MainLayout>
   );
