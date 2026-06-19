@@ -4,26 +4,57 @@ import { supabase } from "../lib/supabase";
 interface Props {
   onClose: () => void;
   onPacienteGuardado: () => void;
+  paciente?: any;
 }
 
 function PatientForm({
   onClose,
-  onPacienteGuardado
+  onPacienteGuardado,
+  paciente
 }: Props) {
 
-  const [nombres, setNombres] = useState("");
-  const [apellidos, setApellidos] = useState("");
-  const [rut, setRut] = useState("");
-  const [fechaNacimiento, setFechaNacimiento] = useState("");
-  const [edad, setEdad] = useState("");
-  const [sexo, setSexo] = useState("");
-  const [telefono, setTelefono] = useState("");
-  const [email, setEmail] = useState("");
-  const [direccion, setDireccion] = useState("");
-  const [comuna, setComuna] = useState("");
-  const [ciudad, setCiudad] = useState("");
-  const [ocupacion, setOcupacion] = useState("");
-  const [observaciones, setObservaciones] = useState("");
+  const [nombres, setNombres] =
+    useState(paciente?.nombres || "");
+
+  const [apellidos, setApellidos] =
+    useState(paciente?.apellidos || "");
+
+  const [rut, setRut] =
+    useState(paciente?.rut || "");
+
+  const [fechaNacimiento, setFechaNacimiento] =
+    useState(paciente?.fecha_nacimiento || "");
+
+  const [edad, setEdad] =
+    useState(
+      paciente?.edad?.toString() || ""
+    );
+
+  const [sexo, setSexo] =
+    useState(paciente?.sexo || "");
+
+  const [telefono, setTelefono] =
+    useState(paciente?.telefono || "");
+
+  const [email, setEmail] =
+    useState(paciente?.email || "");
+
+  const [direccion, setDireccion] =
+    useState(paciente?.direccion || "");
+
+  const [comuna, setComuna] =
+    useState(paciente?.comuna || "");
+
+  const [ciudad, setCiudad] =
+    useState(paciente?.ciudad || "");
+
+  const [ocupacion, setOcupacion] =
+    useState(paciente?.ocupacion || "");
+
+  const [observaciones, setObservaciones] =
+    useState(
+      paciente?.observaciones || ""
+    );
 
 
 
@@ -33,10 +64,13 @@ function PatientForm({
 
     e.preventDefault();
 
-    const { error } = await supabase
-      .from("pacientes")
-      .insert([
-        {
+    let error;
+
+    if (paciente) {
+
+      const resultado = await supabase
+        .from("pacientes")
+        .update({
           nombres,
           apellidos,
           rut,
@@ -50,8 +84,36 @@ function PatientForm({
           ciudad,
           ocupacion,
           observaciones
-        }
-      ]);
+        })
+        .eq("id", paciente.id);
+
+      error = resultado.error;
+
+    } else {
+
+      const resultado = await supabase
+        .from("pacientes")
+        .insert([
+          {
+            nombres,
+            apellidos,
+            rut,
+            fecha_nacimiento: fechaNacimiento,
+            edad: Number(edad),
+            sexo,
+            telefono,
+            email,
+            direccion,
+            comuna,
+            ciudad,
+            ocupacion,
+            observaciones
+          }
+        ]);
+
+      error = resultado.error;
+
+    }
 
 
     if (error) {
@@ -61,7 +123,12 @@ function PatientForm({
 
     }
 
-    alert("Paciente guardado correctamente");
+
+    if (paciente)
+      alert("Paciente actualizado correctamente");
+    else
+      alert("Paciente guardado correctamente");
+
 
     onPacienteGuardado();
 
