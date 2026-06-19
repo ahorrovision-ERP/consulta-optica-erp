@@ -25,9 +25,50 @@ function Pacientes() {
     "Acciones"
   ];
 
-  const [pacientes, setPacientes] = useState<string[][]>([]);
+  const [pacientes, setPacientes] = useState<any[][]>([]);
   useEffect(() => {
   cargarPacientes();
+    
+    function editarPaciente(paciente: any) {
+
+  setPacienteSeleccionado(paciente);
+
+  setOpenModal(true);
+
+}
+
+
+
+async function eliminarPaciente(
+  paciente: any
+) {
+
+  const confirmar = window.confirm(
+    `¿Eliminar a ${paciente.nombres} ${paciente.apellidos}?`
+  );
+
+  if (!confirmar) return;
+
+
+  const { error } = await supabase
+    .from("pacientes")
+    .delete()
+    .eq("id", paciente.id);
+
+
+  if (error) {
+
+    alert(error.message);
+
+    return;
+
+  }
+
+  alert("Paciente eliminado");
+
+  cargarPacientes();
+
+}
 }, []);
 
   async function cargarPacientes() {
