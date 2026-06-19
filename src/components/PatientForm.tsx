@@ -1,14 +1,10 @@
 import { useState } from "react";
 import { supabase } from "../lib/supabase";
 
-interface Props {
-  onClose: () => void;
-  onSaved: () => void;
-}
+function PatientForm() {
 
-function PatientForm({ onClose, onSaved }: Props) {
-
-  const [nombre, setNombre] = useState("");
+  const [nombres, setNombres] = useState("");
+  const [apellidos, setApellidos] = useState("");
   const [rut, setRut] = useState("");
   const [telefono, setTelefono] = useState("");
   const [email, setEmail] = useState("");
@@ -26,7 +22,8 @@ function PatientForm({ onClose, onSaved }: Props) {
       .from("pacientes")
       .insert([
         {
-          nombres: nombre,
+          nombres,
+          apellidos,
           rut,
           telefono,
           email,
@@ -37,17 +34,17 @@ function PatientForm({ onClose, onSaved }: Props) {
       ]);
 
     if (error) {
+
       alert("Error al guardar");
+
       console.log(error);
+
       return;
     }
 
-    alert("Paciente guardado");
+    alert("Paciente guardado correctamente");
 
-    onSaved();
-
-    onClose();
-
+    window.location.reload();
   }
 
   return (
@@ -59,31 +56,23 @@ function PatientForm({ onClose, onSaved }: Props) {
       <div className="form-row">
 
         <div className="form-group">
-
-          <label>Nombre completo</label>
+          <label>Nombres</label>
 
           <input
             type="text"
-            value={nombre}
-            onChange={(e) =>
-              setNombre(e.target.value)
-            }
+            value={nombres}
+            onChange={(e) => setNombres(e.target.value)}
           />
-
         </div>
 
         <div className="form-group">
-
-          <label>RUT</label>
+          <label>Apellidos</label>
 
           <input
             type="text"
-            value={rut}
-            onChange={(e) =>
-              setRut(e.target.value)
-            }
+            value={apellidos}
+            onChange={(e) => setApellidos(e.target.value)}
           />
-
         </div>
 
       </div>
@@ -94,31 +83,23 @@ function PatientForm({ onClose, onSaved }: Props) {
       <div className="form-row">
 
         <div className="form-group">
+          <label>RUT</label>
 
+          <input
+            type="text"
+            value={rut}
+            onChange={(e) => setRut(e.target.value)}
+          />
+        </div>
+
+        <div className="form-group">
           <label>Teléfono</label>
 
           <input
             type="text"
             value={telefono}
-            onChange={(e) =>
-              setTelefono(e.target.value)
-            }
+            onChange={(e) => setTelefono(e.target.value)}
           />
-
-        </div>
-
-        <div className="form-group">
-
-          <label>Email</label>
-
-          <input
-            type="email"
-            value={email}
-            onChange={(e) =>
-              setEmail(e.target.value)
-            }
-          />
-
         </div>
 
       </div>
@@ -129,32 +110,39 @@ function PatientForm({ onClose, onSaved }: Props) {
       <div className="form-row">
 
         <div className="form-group">
+          <label>Email</label>
 
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+        </div>
+
+        <div className="form-group">
           <label>Ciudad</label>
 
           <input
             type="text"
             value={ciudad}
-            onChange={(e) =>
-              setCiudad(e.target.value)
-            }
+            onChange={(e) => setCiudad(e.target.value)}
           />
-
         </div>
 
-        <div className="form-group">
+      </div>
 
-          <label>Dirección</label>
 
-          <input
-            type="text"
-            value={direccion}
-            onChange={(e) =>
-              setDireccion(e.target.value)
-            }
-          />
+      {/* FILA 4 */}
 
-        </div>
+      <div className="form-group">
+
+        <label>Dirección</label>
+
+        <input
+          type="text"
+          value={direccion}
+          onChange={(e) => setDireccion(e.target.value)}
+        />
 
       </div>
 
@@ -168,10 +156,8 @@ function PatientForm({ onClose, onSaved }: Props) {
         <textarea
           rows={5}
           value={observaciones}
-          onChange={(e) =>
-            setObservaciones(e.target.value)
-          }
-        />
+          onChange={(e) => setObservaciones(e.target.value)}
+        ></textarea>
 
       </div>
 
@@ -183,7 +169,6 @@ function PatientForm({ onClose, onSaved }: Props) {
         <button
           type="button"
           className="btn-secondary"
-          onClick={onClose}
         >
           Cancelar
         </button>
