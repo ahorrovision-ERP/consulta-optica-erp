@@ -78,6 +78,15 @@ function Pacientes() {
     alert("Paciente eliminado correctamente");
 
     cargarPacientes();
+
+    const { data, error } = await supabase
+  .from("pacientes")
+  .select("*")
+  .order("id");
+
+console.log(data);
+console.log(error);
+    
   }
 
   return (
