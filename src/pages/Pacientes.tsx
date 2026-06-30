@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-// import { supabase } from "../supabase";
 import { supabase } from "../lib/supabase";
 
 import MainLayout from "../layout/MainLayout";
@@ -11,9 +10,7 @@ import PatientModal from "../components/PatientModal";
 import PatientForm from "../components/PatientForm";
 
 function Pacientes() {
-
-  const [pacienteSeleccionado, setPacienteSeleccionado] =
-  useState<any>(null);
+  const [pacienteSeleccionado, setPacienteSeleccionado] = useState<any>(null);
   const [openModal, setOpenModal] = useState(false);
 
   const columnas = [
@@ -26,91 +23,70 @@ function Pacientes() {
   ];
 
   const [pacientes, setPacientes] = useState<any[][]>([]);
+
   useEffect(() => {
-  cargarPacientes();
-    
-    function editarPaciente(paciente: any) {
-
-  setPacienteSeleccionado(paciente);
-
-  setOpenModal(true);
-
-}
-
-
-
-async function eliminarPaciente(
-  paciente: any
-) {
-
-  const confirmar = window.confirm(
-    `¿Eliminar a ${paciente.nombres} ${paciente.apellidos}?`
-  );
-
-  if (!confirmar) return;
-
-
-  const { error } = await supabase
-    .from("pacientes")
-    .delete()
-    .eq("id", paciente.id);
-
-
-  if (error) {
-
-    alert(error.message);
-
-    return;
-
-  }
-
-  alert("Paciente eliminado");
-
-  cargarPacientes();
-
-}
-}, []);
+    cargarPacientes();
+  }, []);
 
   async function cargarPacientes() {
+    const { data, error } = await supabase
+      .from("pacientes")
+      .select("*")
+      .order("id");
 
-  const { data, error } = await supabase
-    .from("pacientes")
-    .select("*")
-    .order("id");
+    if (error) {
+      console.error(error);
+      return;
+    }
 
-  if (!error && data) {
+    if (!data) return;
 
-   const filas = data.map((p) => [
-
-  p.id?.toString() || "",
-
-  `${p.nombres} ${p.apellidos}`,
-
-  p.telefono || "",
-
-  p.edad?.toString() || "",
-
-  p.ciudad || "",
-
-  p
-
-]);
+    const filas = data.map((p) => [
+      p.id?.toString() || "",
+      `${p.nombres} ${p.apellidos}`,
+      p.telefono || "",
+      p.edad?.toString() || "",
+      p.ciudad || "",
+      p
+    ]);
 
     setPacientes(filas);
-
   }
 
-}
-  
+  function editarPaciente(paciente: any) {
+    setPacienteSeleccionado(paciente);
+    setOpenModal(true);
+  }
+
+  async function eliminarPaciente(paciente: any) {
+    const confirmar = window.confirm(
+      `¿Eliminar a ${paciente.nombres} ${paciente.apellidos}?`
+    );
+
+    if (!confirmar) return;
+
+    const { error } = await supabase
+      .from("pacientes")
+      .delete()
+      .eq("id", paciente.id);
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    alert("Paciente eliminado correctamente");
+
+    cargarPacientes();
+  }
+
   return (
     <MainLayout>
-
       <PageHeader
         titulo="Pacientes"
         subtitulo="Gestión de pacientes registrados"
       />
 
-      {/* Barra superior */}
       <div
         style={{
           display: "flex",
@@ -119,7 +95,6 @@ async function eliminarPaciente(
           marginBottom: "25px"
         }}
       >
-
         <div style={{ flex: 1 }}>
           <SearchBar />
         </div>
@@ -127,12 +102,9 @@ async function eliminarPaciente(
         <button
           className="btn-primary"
           onClick={() => {
-
-  setPacienteSeleccionado(null);
-
-  setOpenModal(true);
-
-}}
+            setPacienteSeleccionado(null);
+            setOpenModal(true);
+          }}
         >
           + Nuevo
         </button>
@@ -144,41 +116,36 @@ async function eliminarPaciente(
         <button className="btn-secondary">
           Exportar
         </button>
-
       </div>
 
       <DataTable
-  columns={columnas}
-  data={pacientes}
-  onEditar={editarPaciente}
-  onEliminar={eliminarPaciente}
-/>
+        columns={columnas}
+        data={pacientes}
+        onEditar={editarPaciente}
+        onEliminar={eliminarPaciente}
+      />
 
-      {/* Modal */}
       <PatientModal
-  isOpen={openModal}
-  title={
-  pacienteSeleccionado
-    ? "Editar Paciente"
-    : "Nuevo Paciente"
-}
-  onClose={() => setOpenModal(false)}
->
-
- <PatientForm
-  paciente={pacienteSeleccionado}
-  onClose={() => {
-
-    setOpenModal(false);
-
-    setPacienteSeleccionado(null);
-
-  }}
-  onPacienteGuardado={cargarPacientes}
-/>
-
-</PatientModal>
-
+        isOpen={openModal}
+        title={
+          pacienteSeleccionado
+            ? "Editar Paciente"
+            : "Nuevo Paciente"
+        }
+        onClose={() => {
+          setOpenModal(false);
+          setPacienteSeleccionado(null);
+        }}
+      >
+        <PatientForm
+          paciente={pacienteSeleccionado}
+          onClose={() => {
+            setOpenModal(false);
+            setPacienteSeleccionado(null);
+          }}
+          onPacienteGuardado={cargarPacientes}
+        />
+      </PatientModal>
     </MainLayout>
   );
 }
