@@ -78,9 +78,8 @@ function Pacientes() {
     alert("Paciente eliminado correctamente");
 
     cargarPacientes();
+  }
 
-     }
-    
   return (
     <MainLayout>
       <PageHeader
