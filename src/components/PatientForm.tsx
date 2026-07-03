@@ -56,6 +56,8 @@ function PatientForm({
       paciente?.observaciones || ""
     );
 
+  const [guardando, setGuardando] = useState(false);
+
 
 
   async function guardarPaciente(
@@ -63,6 +65,12 @@ function PatientForm({
   ) {
 
     e.preventDefault();
+
+    if (!nombres.trim()) return alert("Debe ingresar los nombres");
+    if (!apellidos.trim()) return alert("Debe ingresar los apellidos");
+    if (!rut.trim()) return alert("Debe ingresar el RUT");
+
+    setGuardando(true);
 
     let error;
 
@@ -118,6 +126,7 @@ function PatientForm({
 
     if (error) {
 
+      setGuardando(false);
       alert(error.message);
       return;
 
@@ -130,6 +139,7 @@ function PatientForm({
       alert("Paciente guardado correctamente");
 
 
+    setGuardando(false);
     onPacienteGuardado();
 
     onClose();
@@ -151,6 +161,7 @@ function PatientForm({
           <label>Nombres</label>
 
           <input
+            required
             type="text"
             value={nombres}
             onChange={(e) => setNombres(e.target.value)}
@@ -164,6 +175,7 @@ function PatientForm({
           <label>Apellidos</label>
 
           <input
+            required
             type="text"
             value={apellidos}
             onChange={(e) => setApellidos(e.target.value)}
@@ -184,6 +196,7 @@ function PatientForm({
           <label>RUT</label>
 
           <input
+            required
             type="text"
             value={rut}
             onChange={(e) => setRut(e.target.value)}
@@ -374,8 +387,9 @@ function PatientForm({
         <button
           type="submit"
           className="btn-primary"
+          disabled={guardando}
         >
-          Guardar Paciente
+          {guardando ? "Guardando..." : paciente ? "Actualizar Paciente" : "Guardar Paciente"}
         </button>
 
       </div>
@@ -387,4 +401,3 @@ function PatientForm({
 }
 
 export default PatientForm;
-
