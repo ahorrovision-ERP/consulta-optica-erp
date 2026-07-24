@@ -1,19 +1,33 @@
+import React from "react";
 import Sidebar from "../components/Sidebar";
 
-type Props = {
+interface Props {
   children: React.ReactNode;
-};
+}
 
 function MainLayout({ children }: Props) {
   return (
-    <div className="container">
-     
+    <div
+      style={{
+        display: "flex",
+        minHeight: "100vh",
+        background: "#f5f7fb"
+      }}
+    >
+      {/* Sidebar */}
       <Sidebar />
- 
-      <main className="contenido">
+
+      {/* Contenido Principal */}
+      <main
+        style={{
+          flex: 1,
+          padding: "35px",
+          overflowY: "auto",
+          boxSizing: "border-box"
+        }}
+      >
         {children}
       </main>
-
     </div>
   );
 }
