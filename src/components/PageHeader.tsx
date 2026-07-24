@@ -7,30 +7,56 @@ function PageHeader({
   titulo,
   subtitulo
 }: PageHeaderProps) {
+
   return (
+
     <div
       style={{
-        marginBottom: "30px"
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: "35px",
+        paddingBottom: "18px",
+        borderBottom: "1px solid #ececec"
       }}
     >
-      <h1
-        style={{
-          marginBottom: "10px"
-        }}
-      >
-        {titulo}
-      </h1>
 
-      <p
-        style={{
-          color: "#777",
-          fontSize: "18px"
-        }}
-      >
-        {subtitulo}
-      </p>
+      <div>
+
+        <h1
+          style={{
+            margin: 0,
+            color: "#222",
+            fontSize: "34px",
+            fontWeight: 700,
+            letterSpacing: ".3px"
+          }}
+        >
+          {titulo}
+        </h1>
+
+        {subtitulo && (
+
+          <p
+            style={{
+              marginTop: "8px",
+              marginBottom: 0,
+              color: "#777",
+              fontSize: "16px",
+              fontWeight: 400
+            }}
+          >
+            {subtitulo}
+          </p>
+
+        )}
+
+      </div>
+
     </div>
+
   );
+
 }
 
 export default PageHeader;
