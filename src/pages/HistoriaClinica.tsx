@@ -224,7 +224,7 @@ function HistoriaClinica() {
           }}
         >
 
-           id="parte2"
+           
           {pacientesFiltrados.length === 0 && (
 
             <div
