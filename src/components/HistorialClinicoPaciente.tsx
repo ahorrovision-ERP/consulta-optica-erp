@@ -559,18 +559,23 @@ const [historiaDetalle, setHistoriaDetalle] =
       >
 
 
-        <DetalleHistoriaClinica
+       <DetalleHistoriaClinica
 
-          historia={
-            historiaDetalle
-          }
+  historia={
+    historiaDetalle
+  }
 
 
-          onClose={() =>
-            setHistoriaDetalle(null)
-          }
+  paciente={
+    paciente
+  }
 
-        />
+
+  onClose={() =>
+    setHistoriaDetalle(null)
+  }
+
+/>
 
 
       </div>
