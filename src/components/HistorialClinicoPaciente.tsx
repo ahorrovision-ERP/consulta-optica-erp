@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
-
+import DetalleHistoriaClinica from "./DetalleHistoriaClinica";
 
 interface Props {
 
@@ -30,7 +30,8 @@ function HistorialClinicoPaciente({
   const [cargando, setCargando] =
     useState(true);
 
-
+const [historiaDetalle, setHistoriaDetalle] =
+  useState<any>(null);
 
 
 
@@ -421,28 +422,32 @@ function HistorialClinicoPaciente({
 
                     <button
 
-                      style={{
+  onClick={() =>
+    setHistoriaDetalle(historia)
+  }
 
-                        background:"#333",
 
-                        color:"#fff",
+  style={{
 
-                        border:"none",
+    background:"#333",
 
-                        padding:"10px 15px",
+    color:"#fff",
 
-                        borderRadius:"8px",
+    border:"none",
 
-                        cursor:"pointer"
+    padding:"10px 15px",
 
-                      }}
+    borderRadius:"8px",
 
-                    >
+    cursor:"pointer"
 
-                      👁 Ver detalle
+  }}
 
-                    </button>
+>
 
+  👁 Ver detalle
+
+</button>
 
 
 
@@ -494,6 +499,87 @@ function HistorialClinicoPaciente({
         )
 
       }
+
+{
+  historiaDetalle && (
+
+    <div
+
+      style={{
+
+        position:"fixed",
+
+        top:0,
+
+        left:0,
+
+        width:"100%",
+
+        height:"100%",
+
+        background:"rgba(0,0,0,.45)",
+
+        display:"flex",
+
+        justifyContent:"center",
+
+        alignItems:"center",
+
+        padding:"20px",
+
+        zIndex:10000,
+
+        overflowY:"auto"
+
+      }}
+
+    >
+
+
+      <div
+
+        style={{
+
+          background:"#fff",
+
+          borderRadius:"20px",
+
+          padding:"30px",
+
+          width:"100%",
+
+          maxWidth:"850px",
+
+          maxHeight:"90vh",
+
+          overflowY:"auto"
+
+        }}
+
+      >
+
+
+        <DetalleHistoriaClinica
+
+          historia={
+            historiaDetalle
+          }
+
+
+          onClose={() =>
+            setHistoriaDetalle(null)
+          }
+
+        />
+
+
+      </div>
+
+
+    </div>
+
+  )
+}
 
 
     </div>
