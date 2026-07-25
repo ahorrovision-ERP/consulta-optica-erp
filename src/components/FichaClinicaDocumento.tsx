@@ -20,9 +20,10 @@ function FichaClinicaDocumento({
 
 
 
-  return (
+ return (
 
-    <div
+<div
+className="print-area"
 
       style={{
 
