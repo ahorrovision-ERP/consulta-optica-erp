@@ -66,41 +66,7 @@ function FichaClinicaDocumento({
 
 
 
-        <div
-
-          style={{
-
-            width:"90px",
-
-            height:"90px",
-
-            border:"2px dashed #ccc",
-
-            display:"flex",
-
-            alignItems:"center",
-
-            justifyContent:"center",
-
-            borderRadius:"10px",
-
-            color:"#999",
-
-            fontSize:"12px",
-
-            textAlign:"center"
-
-          }}
-
-        >
-
-          LOGO
-
-          <br/>
-
-          ÓPTICA
-
-        </div>
+        <LogoOptica />
 
 
 
