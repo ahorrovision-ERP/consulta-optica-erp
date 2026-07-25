@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import MainLayout from "../layout/MainLayout";
 import PageHeader from "../components/PageHeader";
 import HistoriaClinicaForm from "../components/HistoriaClinicaForm";
+import HistorialClinicoPaciente from "../components/HistorialClinicoPaciente";
 import { supabase } from "../lib/supabase";
 
 
