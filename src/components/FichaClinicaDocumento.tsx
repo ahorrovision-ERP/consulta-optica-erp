@@ -1,3 +1,4 @@
+import LogoOptica from "./LogoOptica";
 
 interface Props {
 
