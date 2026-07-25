@@ -20,11 +20,13 @@ function HistoriaClinicaForm({
   const [antecedentes, setAntecedentes] =
     useState("");
 
+
   const [agudezaVisualOD, setAgudezaVisualOD] =
     useState("");
 
   const [agudezaVisualOI, setAgudezaVisualOI] =
     useState("");
+
 
   const [esferaOD, setEsferaOD] =
     useState("");
@@ -32,11 +34,13 @@ function HistoriaClinicaForm({
   const [esferaOI, setEsferaOI] =
     useState("");
 
+
   const [cilindroOD, setCilindroOD] =
     useState("");
 
   const [cilindroOI, setCilindroOI] =
     useState("");
+
 
   const [ejeOD, setEjeOD] =
     useState("");
@@ -44,11 +48,24 @@ function HistoriaClinicaForm({
   const [ejeOI, setEjeOI] =
     useState("");
 
+
   const [adicion, setAdicion] =
     useState("");
 
+
   const [distanciaPupilar, setDistanciaPupilar] =
     useState("");
+
+
+  const [biomicroscopia, setBiomicroscopia] =
+    useState("");
+
+  const [tonometria, setTonometria] =
+    useState("");
+
+  const [fondoOjo, setFondoOjo] =
+    useState("");
+
 
   const [diagnostico, setDiagnostico] =
     useState("");
@@ -58,6 +75,7 @@ function HistoriaClinicaForm({
 
   const [observaciones, setObservaciones] =
     useState("");
+
 
 
   async function guardarHistoria(
@@ -71,48 +89,77 @@ function HistoriaClinicaForm({
       .from("historias_clinicas")
       .insert([
         {
+
           paciente_id: paciente.id,
 
-          motivo_consulta: motivoConsulta,
+
+          motivo_consulta:
+            motivoConsulta,
+
 
           antecedentes,
+
 
           agudeza_visual_od:
             agudezaVisualOD,
 
+
           agudeza_visual_oi:
             agudezaVisualOI,
+
 
           esfera_od:
             esferaOD,
 
+
           esfera_oi:
             esferaOI,
+
 
           cilindro_od:
             cilindroOD,
 
+
           cilindro_oi:
             cilindroOI,
+
 
           eje_od:
             ejeOD,
 
+
           eje_oi:
             ejeOI,
 
+
           adicion,
+
 
           distancia_pupilar:
             distanciaPupilar,
 
+
+          biomicroscopia,
+
+
+          tonometria,
+
+
+          fondo_ojo:
+            fondoOjo,
+
+
           diagnostico,
+
 
           tratamiento,
 
+
           observaciones
+
         }
       ]);
+
 
 
     if (error) {
@@ -122,6 +169,7 @@ function HistoriaClinicaForm({
       return;
 
     }
+
 
 
     alert(
@@ -135,7 +183,72 @@ function HistoriaClinicaForm({
 
   }
 
-        <div className="form-row">
+
+
+  return (
+
+    <form
+      onSubmit={guardarHistoria}
+      className="historia-form"
+    >
+
+
+      <h3>
+        📝 Datos de Consulta
+      </h3>
+
+
+      <div className="form-group">
+
+        <label>
+          Motivo de Consulta
+        </label>
+
+
+        <textarea
+          rows={3}
+          value={motivoConsulta}
+          onChange={(e)=>
+            setMotivoConsulta(e.target.value)
+          }
+        />
+
+      </div>
+
+
+
+      <div className="form-group">
+
+        <label>
+          Antecedentes
+        </label>
+
+
+        <textarea
+          rows={3}
+          value={antecedentes}
+          onChange={(e)=>
+            setAntecedentes(e.target.value)
+          }
+        />
+
+      </div>
+
+
+
+      <h3
+        style={{
+          marginTop:"30px",
+          marginBottom:"15px"
+        }}
+      >
+        👁️ Agudeza Visual
+      </h3>
+
+
+
+      <div className="form-row">
+
 
         <div className="form-group">
 
@@ -143,16 +256,20 @@ function HistoriaClinicaForm({
             Agudeza Visual OD
           </label>
 
+
           <input
             type="text"
-            value={agudezaOD}
-            onChange={(e) =>
-              setAgudezaOD(e.target.value)
+            value={agudezaVisualOD}
+            onChange={(e)=>
+              setAgudezaVisualOD(
+                e.target.value
+              )
             }
             placeholder="Ej: 20/20"
           />
 
         </div>
+
 
 
         <div className="form-group">
@@ -161,22 +278,25 @@ function HistoriaClinicaForm({
             Agudeza Visual OI
           </label>
 
+
           <input
             type="text"
-            value={agudezaOI}
-            onChange={(e) =>
-              setAgudezaOI(e.target.value)
+            value={agudezaVisualOI}
+            onChange={(e)=>
+              setAgudezaVisualOI(
+                e.target.value
+              )
             }
             placeholder="Ej: 20/25"
           />
 
         </div>
 
+
       </div>
 
+            {/* REFRACCIÓN */}
 
-
-      {/* REFRACCIÓN */}
 
       <h3
         style={{
@@ -191,20 +311,25 @@ function HistoriaClinicaForm({
 
       <div className="form-row">
 
+
         <div className="form-group">
 
           <label>
             OD Esfera
           </label>
 
+
           <input
             value={esferaOD}
             onChange={(e)=>
-              setEsferaOD(e.target.value)
+              setEsferaOD(
+                e.target.value
+              )
             }
           />
 
         </div>
+
 
 
         <div className="form-group">
@@ -213,16 +338,21 @@ function HistoriaClinicaForm({
             OI Esfera
           </label>
 
+
           <input
             value={esferaOI}
             onChange={(e)=>
-              setEsferaOI(e.target.value)
+              setEsferaOI(
+                e.target.value
+              )
             }
           />
 
         </div>
 
+
       </div>
+
 
 
 
@@ -235,10 +365,13 @@ function HistoriaClinicaForm({
             OD Cilindro
           </label>
 
+
           <input
             value={cilindroOD}
             onChange={(e)=>
-              setCilindroOD(e.target.value)
+              setCilindroOD(
+                e.target.value
+              )
             }
           />
 
@@ -252,10 +385,13 @@ function HistoriaClinicaForm({
             OI Cilindro
           </label>
 
+
           <input
             value={cilindroOI}
             onChange={(e)=>
-              setCilindroOI(e.target.value)
+              setCilindroOI(
+                e.target.value
+              )
             }
           />
 
@@ -263,6 +399,8 @@ function HistoriaClinicaForm({
 
 
       </div>
+
+
 
 
 
@@ -275,10 +413,62 @@ function HistoriaClinicaForm({
             OD Eje
           </label>
 
+
           <input
             value={ejeOD}
             onChange={(e)=>
-              setEjeOD(e.target.value)
+              setEjeOD(
+                e.target.value
+              )
+            }
+          />
+
+        </div>
+
+
+
+
+        <div className="form-group">
+
+          <label>
+            OI Eje
+          </label>
+
+
+          <input
+            value={ejeOI}
+            onChange={(e)=>
+              setEjeOI(
+                e.target.value
+              )
+            }
+          />
+
+        </div>
+
+
+      </div>
+
+
+
+
+
+      <div className="form-row">
+
+
+        <div className="form-group">
+
+          <label>
+            Adición
+          </label>
+
+
+          <input
+            value={adicion}
+            onChange={(e)=>
+              setAdicion(
+                e.target.value
+              )
             }
           />
 
@@ -289,13 +479,16 @@ function HistoriaClinicaForm({
         <div className="form-group">
 
           <label>
-            OI Eje
+            Distancia Pupilar
           </label>
 
+
           <input
-            value={ejeOI}
+            value={distanciaPupilar}
             onChange={(e)=>
-              setEjeOI(e.target.value)
+              setDistanciaPupilar(
+                e.target.value
+              )
             }
           />
 
@@ -303,6 +496,7 @@ function HistoriaClinicaForm({
 
 
       </div>
+
 
 
 
@@ -321,21 +515,28 @@ function HistoriaClinicaForm({
 
 
 
+
+
       <div className="form-group">
 
         <label>
           Biomicroscopía
         </label>
 
+
         <textarea
           rows={3}
           value={biomicroscopia}
           onChange={(e)=>
-            setBiomicroscopia(e.target.value)
+            setBiomicroscopia(
+              e.target.value
+            )
           }
         />
 
       </div>
+
+
 
 
 
@@ -345,35 +546,44 @@ function HistoriaClinicaForm({
           Tonometría
         </label>
 
+
         <textarea
           rows={3}
           value={tonometria}
           onChange={(e)=>
-            setTonometria(e.target.value)
+            setTonometria(
+              e.target.value
+            )
           }
         />
 
       </div>
+
+
 
 
 
       <div className="form-group">
 
         <label>
-          Fondo de ojo
+          Fondo de Ojo
         </label>
+
 
         <textarea
           rows={3}
           value={fondoOjo}
           onChange={(e)=>
-            setFondoOjo(e.target.value)
+            setFondoOjo(
+              e.target.value
+            )
           }
         />
 
       </div>
 
-              {/* DIAGNÓSTICO Y TRATAMIENTO */}
+            {/* DIAGNÓSTICO Y TRATAMIENTO */}
+
 
       <h3
         style={{
@@ -386,21 +596,27 @@ function HistoriaClinicaForm({
 
 
 
+
       <div className="form-group">
 
         <label>
           Diagnóstico
         </label>
 
+
         <textarea
           rows={3}
           value={diagnostico}
           onChange={(e)=>
-            setDiagnostico(e.target.value)
+            setDiagnostico(
+              e.target.value
+            )
           }
         />
 
       </div>
+
+
 
 
 
@@ -410,15 +626,20 @@ function HistoriaClinicaForm({
           Tratamiento / Indicaciones
         </label>
 
+
         <textarea
           rows={3}
           value={tratamiento}
           onChange={(e)=>
-            setTratamiento(e.target.value)
+            setTratamiento(
+              e.target.value
+            )
           }
         />
 
       </div>
+
+
 
 
 
@@ -428,11 +649,14 @@ function HistoriaClinicaForm({
           Observaciones Generales
         </label>
 
+
         <textarea
           rows={4}
           value={observaciones}
           onChange={(e)=>
-            setObservaciones(e.target.value)
+            setObservaciones(
+              e.target.value
+            )
           }
         />
 
@@ -440,7 +664,10 @@ function HistoriaClinicaForm({
 
 
 
+
+
       {/* BOTONES */}
+
 
       <div className="form-buttons">
 
@@ -455,6 +682,7 @@ function HistoriaClinicaForm({
 
 
 
+
         <button
           type="submit"
           className="btn-primary"
@@ -466,11 +694,13 @@ function HistoriaClinicaForm({
       </div>
 
 
+
     </form>
 
   );
 
 }
+
 
 
 export default HistoriaClinicaForm;
