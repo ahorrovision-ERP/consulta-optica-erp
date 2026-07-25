@@ -48,10 +48,50 @@ marginBottom:"20px"
 
 
 <h2>
-
 👁 Detalle Historia Clínica
-
 </h2>
+
+
+
+<div
+
+style={{
+
+display:"flex",
+
+gap:"10px"
+
+}}
+
+>
+
+
+<button
+
+onClick={()=>window.print()}
+
+style={{
+
+background:"#cc001f",
+
+color:"#fff",
+
+border:"none",
+
+padding:"10px 18px",
+
+borderRadius:"10px",
+
+cursor:"pointer"
+
+}}
+
+>
+
+🖨 Imprimir Ficha
+
+</button>
+
 
 
 
@@ -78,6 +118,10 @@ cursor:"pointer"
 ✕ Cerrar
 
 </button>
+
+
+
+</div>
 
 
 
