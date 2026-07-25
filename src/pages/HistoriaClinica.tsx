@@ -34,7 +34,8 @@ function HistoriaClinica() {
   const [mostrarFormulario, setMostrarFormulario] =
     useState(false);
 
-
+const [mostrarHistorial, setMostrarHistorial] =
+    useState(false);
 
   async function cargarPacientes() {
 
@@ -150,7 +151,33 @@ function HistoriaClinica() {
 
   }
 
+function abrirHistorial(
+  paciente: Paciente
+){
 
+  setPacienteSeleccionado(
+    paciente
+  );
+
+  setMostrarHistorial(
+    true
+  );
+
+}
+
+
+
+function cerrarHistorial(){
+
+  setMostrarHistorial(
+    false
+  );
+
+  setPacienteSeleccionado(
+    null
+  );
+
+}
 
 
 
@@ -339,30 +366,70 @@ function HistoriaClinica() {
 
 
 
-                <button
+                <div
+  style={{
+    display:"flex",
+    gap:"10px",
+    flexWrap:"wrap"
+  }}
+>
 
-                  onClick={()=>
-                    abrirFormulario(
-                      paciente
-                    )
-                  }
+
+<button
+
+  onClick={()=>
+    abrirFormulario(
+      paciente
+    )
+  }
 
 
-                  style={{
-                    background:"#cc001f",
-                    color:"#fff",
-                    border:"none",
-                    padding:"12px 20px",
-                    borderRadius:"10px",
-                    cursor:"pointer",
-                    fontWeight:"600"
-                  }}
+  style={{
+    background:"#cc001f",
+    color:"#fff",
+    border:"none",
+    padding:"12px 20px",
+    borderRadius:"10px",
+    cursor:"pointer",
+    fontWeight:"600"
+  }}
 
-                >
+>
 
-                  🩺 Nueva Historia
+  🩺 Nueva Historia
 
-                </button>
+</button>
+
+
+
+
+<button
+
+  onClick={()=>
+    abrirHistorial(
+      paciente
+    )
+  }
+
+
+  style={{
+    background:"#333",
+    color:"#fff",
+    border:"none",
+    padding:"12px 20px",
+    borderRadius:"10px",
+    cursor:"pointer",
+    fontWeight:"600"
+  }}
+
+>
+
+  📚 Ver Historial
+
+</button>
+
+
+</div>
 
 
 
@@ -508,7 +575,64 @@ function HistoriaClinica() {
 
       }
 
+{mostrarHistorial &&
+ pacienteSeleccionado && (
 
+
+<div
+  style={{
+    position:"fixed",
+    top:0,
+    left:0,
+    width:"100%",
+    height:"100%",
+    background:"rgba(0,0,0,.45)",
+    display:"flex",
+    justifyContent:"center",
+    alignItems:"center",
+    padding:"20px",
+    zIndex:9999,
+    overflowY:"auto"
+  }}
+>
+
+
+<div
+
+style={{
+  background:"#fff",
+  borderRadius:"20px",
+  padding:"30px",
+  width:"100%",
+  maxWidth:"900px",
+  maxHeight:"90vh",
+  overflowY:"auto"
+}}
+
+>
+
+
+<HistorialClinicoPaciente
+
+  paciente={
+    pacienteSeleccionado
+  }
+
+
+  onClose={
+    cerrarHistorial
+  }
+
+/>
+
+
+</div>
+
+
+</div>
+
+
+)}
 
 
     </MainLayout>
