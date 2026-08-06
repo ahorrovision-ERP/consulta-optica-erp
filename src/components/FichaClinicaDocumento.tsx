@@ -515,17 +515,6 @@ function FichaClinicaDocumento({
 
 
 
-              <th
-
-                style={{
-  border:"1px solid #ccc",
-  padding:"10px",
-  background:"#eeeeee",
-  width:"24%"
-}}
-
-
-
             </tr>
 
 
