@@ -384,17 +384,21 @@ function FichaClinicaDocumento({
 
         <table
 
-          style={{
+  style={{
 
-            width:"100%",
+    width:"100%",
 
-            borderCollapse:"collapse",
+    maxWidth:"100%",
 
-            marginTop:"15px"
+    borderCollapse:"collapse",
 
-          }}
+    marginTop:"15px",
 
-        >
+    tableLayout:"fixed"
+
+  }}
+
+>
 
 
 
