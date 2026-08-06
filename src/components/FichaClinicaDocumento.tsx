@@ -435,7 +435,9 @@ function FichaClinicaDocumento({
 
                   padding:"10px",
 
-                  background:"#eeeeee"
+                  background:"#eeeeee",
+
+                  width:"12%"
 
                 }}
 
@@ -455,7 +457,9 @@ function FichaClinicaDocumento({
 
                   padding:"10px",
 
-                  background:"#eeeeee"
+                  background:"#eeeeee",
+
+                  width:"22%"
 
                 }}
 
@@ -475,7 +479,9 @@ function FichaClinicaDocumento({
 
                   padding:"10px",
 
-                  background:"#eeeeee"
+                  background:"#eeeeee",
+
+                  width:"22%"
 
                 }}
 
@@ -495,7 +501,9 @@ function FichaClinicaDocumento({
 
                   padding:"10px",
 
-                  background:"#eeeeee"
+                  background:"#eeeeee",
+
+                  width:"20%"
 
                 }}
 
@@ -504,6 +512,17 @@ function FichaClinicaDocumento({
                 AV
 
               </th>
+
+
+
+              <th
+
+                style={{
+  border:"1px solid #ccc",
+  padding:"10px",
+  background:"#eeeeee",
+  width:"24%"
+}}
 
 
 
