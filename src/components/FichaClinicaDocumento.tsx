@@ -89,18 +89,14 @@ function FichaClinicaDocumento({
 
 
           <h1
-
-            style={{
-
-              margin:0,
-
-              color:"#cc001f",
-
-              fontSize:"28px"
-
-            }}
-
-          >
+  style={{
+    margin: 0,
+    color: "#cc001f",
+    fontSize: "28px",
+    lineHeight: "1.1",
+    whiteSpace: "normal"
+  }}
+>
 
             Ahorro Visión ERP
 
@@ -110,17 +106,13 @@ function FichaClinicaDocumento({
 
 
           <h3
-
-            style={{
-
-              marginTop:"8px",
-
-              color:"#555"
-
-            }}
-
-          >
-
+  style={{
+    marginTop: "8px",
+    marginBottom: 0,
+    color: "#555",
+    fontSize: "16px"
+  }}
+>
             Ficha Clínica Óptica
 
           </h3>
