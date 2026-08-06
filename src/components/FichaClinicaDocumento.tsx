@@ -23,23 +23,26 @@ function FichaClinicaDocumento({
  return (
 
 <div
-className="print-area"
+  className="print-area"
+  style={{
+    background:"#ffffff",
 
-      style={{
+    padding:"40px",
 
-        background:"#ffffff",
+    borderRadius:"10px",
 
-        padding:"40px",
+    color:"#333",
 
-        borderRadius:"10px",
+    fontFamily:"Arial, sans-serif",
 
-        color:"#333",
+    boxSizing:"border-box",
 
-        fontFamily:"Arial, sans-serif"
+    width:"100%",
 
-      }}
+    maxWidth:"100%"
 
-    >
+  }}
+>
 
 
 
