@@ -7,6 +7,7 @@ import HistoriaClinica from "./pages/HistoriaClinica";
 import Recetas from "./pages/Recetas";
 import Ordenes from "./pages/Ordenes";
 import Ventas from "./pages/Ventas";
+import ConfiguracionOptica from "./pages/ConfiguracionOptica";
 
 function App() {
   return (
@@ -14,7 +15,10 @@ function App() {
 
       <Routes>
 
-        <Route path="/" element={<Dashboard />} />
+        <Route
+          path="/"
+          element={<Dashboard />}
+        />
 
         <Route
           path="/pacientes"
@@ -44,6 +48,11 @@ function App() {
         <Route
           path="/ventas"
           element={<Ventas />}
+        />
+
+        <Route
+          path="/configuracion-optica"
+          element={<ConfiguracionOptica />}
         />
 
       </Routes>
