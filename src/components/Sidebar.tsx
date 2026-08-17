@@ -36,11 +36,15 @@ function Sidebar() {
           </li>
 
           <li>
-            <Link to="/pacientes">Pacientes</Link>
+            <Link to="/pacientes">
+              Pacientes
+            </Link>
           </li>
 
           <li>
-            <Link to="/agenda">Agenda</Link>
+            <Link to="/agenda">
+              Agenda
+            </Link>
           </li>
 
           <li>
@@ -76,6 +80,24 @@ function Sidebar() {
           <li>
             <Link to="/ventas">
               Ventas
+            </Link>
+          </li>
+
+        </ul>
+
+      </div>
+
+
+      {/* CONFIGURACIÓN */}
+      <div className="grupo">
+
+        <h4>ADMINISTRACIÓN</h4>
+
+        <ul>
+
+          <li>
+            <Link to="/configuracion-optica">
+              ⚙️ Configuración
             </Link>
           </li>
 
