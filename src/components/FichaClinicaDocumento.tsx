@@ -1,4 +1,6 @@
+import { useEffect, useState } from "react";
 import LogoOptica from "./LogoOptica";
+import { supabase } from "../lib/supabase";
 
 interface Props {
   paciente: any;
@@ -9,6 +11,45 @@ function FichaClinicaDocumento({
   paciente,
   historia
 }: Props) {
+
+  const [configuracion, setConfiguracion] = useState<any>(null);
+
+  useEffect(() => {
+    const cargarConfiguracion = async () => {
+      const { data, error } = await supabase
+        .from("configuracion_optica")
+        .select("*")
+        .limit(1)
+        .maybeSingle();
+
+      if (!error && data) {
+        setConfiguracion(data);
+      }
+    };
+
+    cargarConfiguracion();
+  }, []);
+
+  const nombreOptica =
+    configuracion?.nombre_optica ||
+    "Ahorro Visión ERP";
+
+  const direccionOptica =
+    configuracion?.direccion ||
+    "";
+
+  const telefonoOptica =
+    configuracion?.telefono ||
+    "";
+
+  const correoOptica =
+    configuracion?.correo ||
+    configuracion?.correo_electronico ||
+    "";
+
+  const logoConfigurado =
+    configuracion?.logo_url ||
+    "";
 
   const fechaConsulta = historia.fecha_registro
     ? new Date(historia.fecha_registro).toLocaleDateString("es-CL")
@@ -124,9 +165,9 @@ function FichaClinicaDocumento({
             .print-header {
               display: grid !important;
 
-              grid-template-columns: 32mm 1fr !important;
+              grid-template-columns: 28mm minmax(0, 1fr) 42mm !important;
 
-              column-gap: 5mm !important;
+              column-gap: 4mm !important;
 
               align-items: center !important;
 
@@ -142,11 +183,11 @@ function FichaClinicaDocumento({
             }
 
             .print-logo {
-              width: 32mm !important;
+              width: 28mm !important;
 
               min-width: 0 !important;
 
-              max-width: 32mm !important;
+              max-width: 28mm !important;
 
               display: flex !important;
 
@@ -162,17 +203,71 @@ function FichaClinicaDocumento({
 
               width: auto !important;
 
-              max-width: 30mm !important;
+              max-width: 26mm !important;
 
               max-height: 18mm !important;
 
               object-fit: contain !important;
             }
 
+            .print-optica-info {
+              min-width: 0 !important;
+
+              max-width: 100% !important;
+
+              overflow: visible !important;
+
+              font-size: 7.5px !important;
+
+              line-height: 1.35 !important;
+
+              color: #555555 !important;
+
+              text-align: left !important;
+
+              overflow-wrap: anywhere !important;
+            }
+
+            .print-optica-info .optica-name {
+              color: #333333 !important;
+
+              font-size: 9px !important;
+
+              font-weight: 700 !important;
+
+              margin-bottom: 1mm !important;
+            }
+
+            .print-optica-info .optica-line {
+              margin: 0 0 0.7mm 0 !important;
+
+              padding: 0 !important;
+
+              font-size: 7.5px !important;
+
+              line-height: 1.3 !important;
+            }
+
             .print-title {
               min-width: 0 !important;
 
               width: 100% !important;
+
+              text-align: right !important;
+
+              overflow: visible !important;
+
+              word-break: normal !important;
+
+              overflow-wrap: normal !important;
+            }
+
+            .print-title {
+              min-width: 0 !important;
+
+              width: 42mm !important;
+
+              max-width: 42mm !important;
 
               text-align: right !important;
 
@@ -670,8 +765,8 @@ function FichaClinicaDocumento({
             className="print-header"
             style={{
               display: "grid",
-              gridTemplateColumns: "140px 1fr",
-              gap: "20px",
+              gridTemplateColumns: "100px minmax(0, 1fr) 150px",
+              gap: "15px",
               alignItems: "center",
               borderBottom: "2px solid #cc001f",
               paddingBottom: "20px",
@@ -687,9 +782,59 @@ function FichaClinicaDocumento({
                 justifyContent: "flex-start"
               }}
             >
-              <LogoOptica />
+              {logoConfigurado ? (
+                <img
+                  src={logoConfigurado}
+                  alt={`Logo ${nombreOptica}`}
+                  style={{
+                    display: "block",
+                    maxWidth: "100px",
+                    maxHeight: "65px",
+                    objectFit: "contain"
+                  }}
+                />
+              ) : (
+                <LogoOptica />
+              )}
             </div>
 
+            <div
+              className="print-optica-info"
+              style={{
+                minWidth: 0,
+                textAlign: "left",
+                color: "#555"
+              }}
+            >
+              <div
+                className="optica-name"
+                style={{
+                  fontWeight: 700,
+                  color: "#333",
+                  marginBottom: "4px"
+                }}
+              >
+                {nombreOptica}
+              </div>
+
+              {direccionOptica && (
+                <div className="optica-line">
+                  📍 {direccionOptica}
+                </div>
+              )}
+
+              {telefonoOptica && (
+                <div className="optica-line">
+                  ☎ {telefonoOptica}
+                </div>
+              )}
+
+              {correoOptica && (
+                <div className="optica-line">
+                  ✉ {correoOptica}
+                </div>
+              )}
+            </div>
 
             <div
               className="print-title"
@@ -703,21 +848,20 @@ function FichaClinicaDocumento({
                 style={{
                   margin: 0,
                   color: "#cc001f",
-                  fontSize: "28px",
+                  fontSize: "22px",
                   lineHeight: "1.1",
                   whiteSpace: "normal"
                 }}
               >
-                Ahorro Visión ERP
+                {nombreOptica}
               </h1>
-
 
               <h3
                 style={{
                   marginTop: "8px",
                   marginBottom: 0,
                   color: "#555",
-                  fontSize: "16px"
+                  fontSize: "14px"
                 }}
               >
                 Ficha Clínica Óptica
@@ -1148,7 +1292,7 @@ function FichaClinicaDocumento({
           >
 
             <p>
-              Ahorro Visión ERP
+              {nombreOptica}
             </p>
 
 
