@@ -32,7 +32,9 @@ function Sidebar() {
         <ul>
 
           <li>
-            <Link to="/">Dashboard</Link>
+            <Link to="/">
+              Dashboard
+            </Link>
           </li>
 
           <li>
@@ -58,7 +60,7 @@ function Sidebar() {
       </div>
 
 
-      {/* INVENTARIO */}
+      {/* INVENTARIO Y VENTAS */}
       <div className="grupo">
 
         <h4>INVENTARIO Y VENTAS</h4>
@@ -97,7 +99,7 @@ function Sidebar() {
 
           <li>
             <Link to="/configuracion-optica">
-              ⚙️ Configuración
+              ⚙️ Configuración de la Óptica
             </Link>
           </li>
 
