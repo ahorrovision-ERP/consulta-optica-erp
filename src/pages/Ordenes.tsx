@@ -122,10 +122,6 @@ const detalleInicial: FormularioDetalle = {
   observaciones: ""
 };
 
-function obtenerFechaActual(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
 function formatearFecha(
   fecha: string | null
 ): string {
@@ -156,9 +152,11 @@ function formatearFechaHora(
   const fechaObjeto =
     new Date(fecha);
 
-  if (Number.isNaN(
-    fechaObjeto.getTime()
-  )) {
+  if (
+    Number.isNaN(
+      fechaObjeto.getTime()
+    )
+  ) {
     return fecha;
   }
 
@@ -197,7 +195,9 @@ function obtenerNumeroOT(
   }
 
   const numero =
-    Number(coincidencia[1]) + 1;
+    Number(
+      coincidencia[1]
+    ) + 1;
 
   return `OT-${String(
     numero
@@ -442,6 +442,19 @@ function Ordenes() {
               obtenerNumeroOT(
                 ordenesCargadas[0]
               )
+          })
+        );
+      }
+
+      if (
+        ordenesCargadas.length === 0 &&
+        !formulario.numero_ot
+      ) {
+        setFormulario(
+          (actual) => ({
+            ...actual,
+            numero_ot:
+              "OT-000001"
           })
         );
       }
@@ -1222,10 +1235,18 @@ function Ordenes() {
           .select("id")
           .single();
 
-      errorOrden =
-        resultado.error;
+      if (
+        resultado.error ||
+        !resultado.data
+      ) {
+        errorOrden =
+          resultado.error ||
+          {
+            message:
+              "No se pudo obtener el ID de la orden actualizada."
+          };
 
-      if (!errorOrden) {
+      } else {
         ordenId =
           resultado.data.id;
       }
@@ -1241,10 +1262,18 @@ function Ordenes() {
           .select("id")
           .single();
 
-      errorOrden =
-        resultado.error;
+      if (
+        resultado.error ||
+        !resultado.data
+      ) {
+        errorOrden =
+          resultado.error ||
+          {
+            message:
+              "No se pudo obtener el ID de la nueva orden."
+          };
 
-      if (!errorOrden) {
+      } else {
         ordenId =
           resultado.data.id;
       }
@@ -1272,13 +1301,15 @@ function Ordenes() {
     }
 
     /*
-      En edición reemplazamos
-      completamente el detalle
-      para mantenerlo sincronizado
+      En edición eliminamos
+      los detalles anteriores
+      para reemplazarlos por
+      la versión actual.
     */
     if (ordenEditando) {
       const {
-        error: errorEliminando
+        error:
+          errorEliminandoDetalles
       } = await supabase
         .from(
           "detalle_ordenes_trabajo"
@@ -1289,15 +1320,17 @@ function Ordenes() {
           ordenId
         );
 
-      if (errorEliminando) {
+      if (
+        errorEliminandoDetalles
+      ) {
         console.error(
           "Error eliminando detalles anteriores:",
-          errorEliminando
+          errorEliminandoDetalles
         );
 
         setErrorMensaje(
           "La orden se actualizó, pero no se pudieron reemplazar sus detalles: " +
-            errorEliminando.message
+            errorEliminandoDetalles.message
         );
 
         setGuardando(false);
@@ -1306,7 +1339,7 @@ function Ordenes() {
     }
 
     /*
-      Guardar detalles
+      Guardar los detalles.
     */
     if (detalles.length > 0) {
       const detallesParaGuardar =
@@ -1921,10 +1954,6 @@ function Ordenes() {
           </div>
         )}
 
-        {/* =====================================================
-            FORMULARIO DE ORDEN
-            ===================================================== */}
-
         <div className="ordenes-card">
 
           <h2>
@@ -1941,8 +1970,6 @@ function Ordenes() {
           <form
             onSubmit={guardarOrden}
           >
-
-            {/* DATOS GENERALES */}
 
             <div className="bloque-orden">
 
@@ -2068,8 +2095,6 @@ function Ordenes() {
 
             </div>
 
-            {/* PACIENTE */}
-
             <div className="bloque-orden">
 
               <h3 className="titulo-bloque">
@@ -2167,8 +2192,6 @@ function Ordenes() {
               )}
 
             </div>
-
-            {/* RECETA */}
 
             <div className="bloque-orden">
 
@@ -2340,8 +2363,6 @@ function Ordenes() {
               </div>
 
             </div>
-
-            {/* DETALLE DE PRODUCTOS */}
 
             <div className="bloque-orden">
 
@@ -2584,7 +2605,12 @@ function Ordenes() {
 
               </div>
 
-              <div className="grid-orden-2" style={{ marginTop: "15px" }}>
+              <div
+                className="grid-orden-2"
+                style={{
+                  marginTop: "15px"
+                }}
+              >
 
                 <div className="campo">
 
@@ -2698,6 +2724,7 @@ function Ordenes() {
                               </td>
 
                               <td>
+
                                 <div>
                                   {
                                     detalle.descripcion
@@ -2712,6 +2739,7 @@ function Ordenes() {
                                     }
                                   </div>
                                 )}
+
                               </td>
 
                               <td>
@@ -2790,8 +2818,6 @@ function Ordenes() {
 
             </div>
 
-            {/* OBSERVACIONES */}
-
             <div className="bloque-orden">
 
               <h3 className="titulo-bloque">
@@ -2816,8 +2842,6 @@ function Ordenes() {
               </div>
 
             </div>
-
-            {/* BOTONES */}
 
             <div className="botones-formulario">
 
@@ -2868,10 +2892,6 @@ function Ordenes() {
           </form>
 
         </div>
-
-        {/* =====================================================
-            LISTADO
-            ===================================================== */}
 
         <div className="ordenes-card">
 
@@ -3005,15 +3025,18 @@ function Ordenes() {
                         >
 
                           <td>
+
                             <div className="orden-numero">
                               {
                                 orden.numero_ot ||
                                 "-"
                               }
                             </div>
+
                           </td>
 
                           <td>
+
                             <div className="orden-numero">
                               {
                                 obtenerNombrePaciente(
@@ -3034,6 +3057,7 @@ function Ordenes() {
                                 }
                               </div>
                             )}
+
                           </td>
 
                           <td>
@@ -3060,12 +3084,14 @@ function Ordenes() {
                           </td>
 
                           <td>
+
                             <span className="estado-orden">
                               {
                                 orden.estado ||
                                 "-"
                               }
                             </span>
+
                           </td>
 
                           <td>
