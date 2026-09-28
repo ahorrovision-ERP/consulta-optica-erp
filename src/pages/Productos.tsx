@@ -338,7 +338,24 @@ function Productos() {
     const stock = Math.max(0, Math.trunc(numero(formulario.stock)));
     const stockMinimo = Math.max(0, Math.trunc(numero(formulario.stock_minimo)));
 
-    const datos = {
+    const esferaMin = formulario.esfera_min === "" ? null : numero(formulario.esfera_min);
+    const esferaMax = formulario.esfera_max === "" ? null : numero(formulario.esfera_max);
+    const cilindroMin = formulario.cilindro_min === "" ? null : numero(formulario.cilindro_min);
+    const cilindroMax = formulario.cilindro_max === "" ? null : numero(formulario.cilindro_max);
+
+    if (esferaMin !== null && esferaMax !== null && esferaMin > esferaMax) {
+      setError("La esfera mínima no puede ser mayor que la esfera máxima.");
+      setGuardando(false);
+      return;
+    }
+
+    if (cilindroMin !== null && cilindroMax !== null && cilindroMin > cilindroMax) {
+      setError("El cilindro mínimo no puede ser mayor que el cilindro máximo.");
+      setGuardando(false);
+      return;
+    }
+
+    const datosBase = {
       codigo: formulario.codigo.trim() || null,
       nombre: formulario.nombre.trim(),
       categoria_id: formulario.categoria_id ? Number(formulario.categoria_id) : null,
@@ -346,7 +363,6 @@ function Productos() {
       marca: formulario.marca.trim() || null,
       modelo: formulario.modelo.trim() || null,
       color: formulario.color.trim() || null,
-      stock,
       stock_minimo: stockMinimo,
       precio_compra: Math.max(0, numero(formulario.precio_compra)),
       precio_venta: Math.max(0, numero(formulario.precio_venta)),
@@ -354,27 +370,42 @@ function Productos() {
       referencia: formulario.referencia.trim() || null,
       material: formulario.material.trim() || null,
       indice_refraccion: formulario.indice_refraccion === "" ? null : numero(formulario.indice_refraccion),
-      esfera_min: formulario.esfera_min === "" ? null : numero(formulario.esfera_min),
-      esfera_max: formulario.esfera_max === "" ? null : numero(formulario.esfera_max),
-      cilindro_min: formulario.cilindro_min === "" ? null : numero(formulario.cilindro_min),
-      cilindro_max: formulario.cilindro_max === "" ? null : numero(formulario.cilindro_max),
+      esfera_min: esferaMin,
+      esfera_max: esferaMax,
+      cilindro_min: cilindroMin,
+      cilindro_max: cilindroMax,
       tratamiento: formulario.tratamiento.trim() || null,
       proveedor_marca: formulario.proveedor_marca.trim() || null,
       ubicacion: formulario.ubicacion.trim() || null,
       observaciones: formulario.observaciones.trim() || null
     };
 
+    const datosNuevo = {
+      ...datosBase,
+      stock
+    };
+
     let resultado;
+
+    let productoCreadoId: number | null = null;
 
     if (productoEditando) {
       resultado = await supabase
         .from("productos")
-        .update(datos)
+        .update(datosBase)
         .eq("id", productoEditando.id);
     } else {
-      resultado = await supabase
+      const resultadoCreacion = await supabase
         .from("productos")
-        .insert([datos]);
+        .insert([datosNuevo])
+        .select("id")
+        .single();
+
+      resultado = resultadoCreacion;
+
+      if (!resultadoCreacion.error && resultadoCreacion.data) {
+        productoCreadoId = resultadoCreacion.data.id;
+      }
     }
 
     if (resultado.error) {
@@ -382,6 +413,24 @@ function Productos() {
       setError("No se pudo guardar el producto: " + resultado.error.message);
       setGuardando(false);
       return;
+    }
+
+    if (!productoEditando && productoCreadoId !== null && stock > 0) {
+      const { error: errorMovimientoInicial } = await supabase
+        .from("inventario_movimientos")
+        .insert([
+          {
+            producto_id: productoCreadoId,
+            tipo_movimiento: "ENTRADA",
+            cantidad: stock,
+            observacion: "Stock inicial del producto",
+            fecha: new Date().toISOString()
+          }
+        ]);
+
+      if (errorMovimientoInicial) {
+        console.warn("No se pudo registrar el stock inicial:", errorMovimientoInicial.message);
+      }
     }
 
     await cargarDatos();
@@ -555,7 +604,6 @@ function Productos() {
 
   const tipoSeleccionado = formulario.tipo_producto;
   const mostrarDatosCristal = tipoSeleccionado === "CRISTAL";
-  const mostrarDatosArmazon = tipoSeleccionado === "ARMAZON";
 
   return (
     <MainLayout>
@@ -923,7 +971,7 @@ function Productos() {
                   {productoEditando ? "Editar producto" : "Nuevo producto"}
                 </h2>
                 <p style={{ margin: "6px 0 0", color: "#777", fontSize: "13px" }}>
-                  Completa los datos de inventario y la referencia comercial.
+                  Completa los datos del producto y sus especificaciones comerciales.
                 </p>
               </div>
               <button
@@ -997,7 +1045,7 @@ function Productos() {
                 </div>
 
                 <div>
-                  <label style={labelStyle()}>Proveedor / Marca comercial</label>
+                  <label style={labelStyle()}>Proveedor / Distribuidor</label>
                   <input value={formulario.proveedor_marca} onChange={(event) => cambiarCampo("proveedor_marca", event.target.value)} placeholder="Proveedor o distribuidor" style={inputStyle()} />
                 </div>
 
@@ -1005,44 +1053,6 @@ function Productos() {
                   <label style={labelStyle()}>Ubicación</label>
                   <input value={formulario.ubicacion} onChange={(event) => cambiarCampo("ubicacion", event.target.value)} placeholder="Vitrina 1 / Bodega A" style={inputStyle()} />
                 </div>
-
-                {mostrarDatosArmazon && (
-                  <div
-                    style={{
-                      gridColumn: "1 / -1",
-                      background: "#fafafa",
-                      border: "1px solid #eee",
-                      borderRadius: "14px",
-                      padding: "16px",
-                      display: "grid",
-                      gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-                      gap: "14px"
-                    }}
-                  >
-                    <div style={{ gridColumn: "1 / -1" }}>
-                      <strong style={{ color: "#333" }}>Datos del armazón</strong>
-                      <p style={{ margin: "5px 0 0", color: "#888", fontSize: "12px" }}>
-                        Estos campos permitirán seleccionarlo después desde una orden de trabajo.
-                      </p>
-                    </div>
-                    <div>
-                      <label style={labelStyle()}>Marca</label>
-                      <input value={formulario.marca} onChange={(event) => cambiarCampo("marca", event.target.value)} style={inputStyle()} />
-                    </div>
-                    <div>
-                      <label style={labelStyle()}>Modelo</label>
-                      <input value={formulario.modelo} onChange={(event) => cambiarCampo("modelo", event.target.value)} style={inputStyle()} />
-                    </div>
-                    <div>
-                      <label style={labelStyle()}>Color</label>
-                      <input value={formulario.color} onChange={(event) => cambiarCampo("color", event.target.value)} style={inputStyle()} />
-                    </div>
-                    <div>
-                      <label style={labelStyle()}>Referencia</label>
-                      <input value={formulario.referencia} onChange={(event) => cambiarCampo("referencia", event.target.value)} style={inputStyle()} />
-                    </div>
-                  </div>
-                )}
 
                 {mostrarDatosCristal && (
                   <div
@@ -1095,8 +1105,26 @@ function Productos() {
                 )}
 
                 <div>
-                  <label style={labelStyle()}>Stock inicial</label>
-                  <input type="number" min="0" step="1" value={formulario.stock} onChange={(event) => cambiarCampo("stock", event.target.value)} style={inputStyle()} />
+                  <label style={labelStyle()}>{productoEditando ? "Stock actual" : "Stock inicial"}</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={formulario.stock}
+                    onChange={(event) => cambiarCampo("stock", event.target.value)}
+                    disabled={Boolean(productoEditando)}
+                    style={{
+                      ...inputStyle(),
+                      background: productoEditando ? "#f5f5f5" : "#fff",
+                      color: productoEditando ? "#777" : "#222",
+                      cursor: productoEditando ? "not-allowed" : "text"
+                    }}
+                  />
+                  {productoEditando && (
+                    <div style={{ marginTop: "5px", color: "#999", fontSize: "11px" }}>
+                      Para modificar el stock utiliza el botón Stock del listado.
+                    </div>
+                  )}
                 </div>
 
                 <div>
