@@ -7,6 +7,7 @@ import HistoriaClinica from "./pages/HistoriaClinica";
 import Recetas from "./pages/Recetas";
 import Ordenes from "./pages/Ordenes";
 import Ventas from "./pages/Ventas";
+import Productos from "./pages/Productos";
 import ConfiguracionOptica from "./pages/ConfiguracionOptica";
 
 function App() {
