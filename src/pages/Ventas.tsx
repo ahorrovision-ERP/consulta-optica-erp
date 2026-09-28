@@ -129,20 +129,6 @@ function moneda(valor: string | number | null | undefined): string {
   }).format(numero(valor));
 }
 
-function formatearFecha(fecha: string | null): string {
-  if (!fecha) {
-    return "-";
-  }
-
-  const partes = fecha.substring(0, 10).split("-");
-
-  if (partes.length !== 3) {
-    return fecha.substring(0, 10);
-  }
-
-  return `${partes[2]}-${partes[1]}-${partes[0]}`;
-}
-
 function formatearFechaHora(fecha: string | null): string {
   if (!fecha) {
     return "-";
@@ -178,18 +164,6 @@ function labelStyle(): CSSProperties {
     color: "#333333",
     fontSize: "13px",
     fontWeight: 700
-  };
-}
-
-function botonSecundarioStyle(): CSSProperties {
-  return {
-    border: "1px solid #dddddd",
-    background: "#eeeeee",
-    color: "#333333",
-    borderRadius: "10px",
-    padding: "10px 15px",
-    fontWeight: 700,
-    cursor: "pointer"
   };
 }
 
