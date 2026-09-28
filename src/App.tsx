@@ -51,6 +51,8 @@ function App() {
           element={<Ventas />}
         />
 
+        <Route path="/inventario" element={<Productos />} />
+        
         <Route
           path="/configuracion-optica"
           element={<ConfiguracionOptica />}
