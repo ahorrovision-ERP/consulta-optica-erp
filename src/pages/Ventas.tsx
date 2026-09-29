@@ -816,27 +816,39 @@ function Ventas() {
     }
 
     const confirmar = window.confirm(
-      `¿Anular la venta ${venta.numero_venta || `#${venta.id}`}?\n\nLa venta no se eliminará; quedará registrada como anulada.`
+      `¿Anular la venta ${venta.numero_venta || `#${venta.id}`}?\n\nLa venta no se eliminará; quedará registrada como anulada y se revertirán sus movimientos de inventario y caja.`
     );
 
     if (!confirmar) {
       return;
     }
 
-    const { error: errorActualizar } = await supabase
-      .from("ventas")
-      .update({ estado: "Anulada" })
-      .eq("id", venta.id);
+    setMensaje("");
+    setErrorMensaje("");
+    setGuardando(true);
 
-    if (errorActualizar) {
+    const { data: resultado, error } = await supabase.rpc(
+      "anular_venta",
+      { p_venta_id: venta.id }
+    );
+
+    if (error) {
+      console.error(error);
+      setGuardando(false);
       alert(
         "No se pudo anular la venta: " +
-          errorActualizar.message
+          error.message
       );
       return;
     }
 
-    setMensaje("✓ Venta anulada correctamente.");
+    setGuardando(false);
+    setMensaje(
+      typeof resultado === "string" && resultado.trim()
+        ? `✓ ${resultado}`
+        : "✓ Venta anulada correctamente. Inventario y caja revertidos."
+    );
+
     await cargarDatos();
   }
 
