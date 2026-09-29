@@ -645,9 +645,7 @@ function Ventas() {
     }
 
     if (abono > total) {
-      setErrorMensaje(
-        "El monto del abono no puede ser superior al total de la venta."
-      );
+      setErrorMensaje("El monto del abono no puede ser superior al total de la venta.");
       return;
     }
 
@@ -658,6 +656,8 @@ function Ventas() {
 
     setGuardando(true);
 
+    const ventaPagada = saldo === 0 && total > 0;
+
     const datosVenta = {
       numero_venta: formulario.numero_venta.trim(),
       paciente_id: Number(formulario.paciente_id),
@@ -665,10 +665,9 @@ function Ventas() {
       subtotal,
       descuento,
       total,
-      estado:
-        saldo === 0 && total > 0
-          ? "Pagada"
-          : formulario.estado || "Pendiente",
+      estado: ventaPagada
+        ? "Pagada"
+        : formulario.estado || "Pendiente",
       observaciones: formulario.observaciones.trim() || null
     };
 
@@ -678,17 +677,11 @@ function Ventas() {
       .select("id")
       .single();
 
-    if (
-      ventaResultado.error ||
-      !ventaResultado.data
-    ) {
+    if (!ventaResultado.data || ventaResultado.error) {
       console.error(ventaResultado.error);
       setErrorMensaje(
         "No se pudo crear la venta: " +
-          (
-            ventaResultado.error?.message ||
-            "No se recibió el ID de la venta."
-          )
+          (ventaResultado.error?.message || "No se recibió el ID de la venta.")
       );
       setGuardando(false);
       return;
@@ -727,8 +720,7 @@ function Ventas() {
             fecha: new Date().toISOString(),
             monto: abono,
             metodo_pago: formularioAbono.metodo_pago,
-            observacion:
-              formularioAbono.observacion.trim() || null
+            observacion: formularioAbono.observacion.trim() || null
           }
         ]);
 
@@ -743,20 +735,42 @@ function Ventas() {
       }
     }
 
+    // Una venta completamente pagada dispara el proceso transaccional
+    // que descuenta stock, registra las salidas y actualiza la caja diaria.
+    if (ventaPagada) {
+      const procesamiento = await supabase.rpc(
+        "procesar_venta_pagada",
+        { p_venta_id: ventaId }
+      );
+
+      if (procesamiento.error) {
+        console.error(procesamiento.error);
+
+        // Dejamos la venta identificada para poder reintentarla sin
+        // fingir que el stock y la caja ya fueron procesados.
+        await supabase
+          .from("ventas")
+          .update({ estado: "Pendiente de procesamiento" })
+          .eq("id", ventaId);
+
+        setErrorMensaje(
+          "La venta se creó, pero no pudo procesarse el inventario y la caja: " +
+            procesamiento.error.message
+        );
+        setGuardando(false);
+        await cargarDatos();
+        return;
+      }
+    }
+
     if (formulario.orden_trabajo_id) {
       const ordenResultado = await supabase
         .from("ordenes_trabajo")
         .update({
           venta_id: ventaId,
-          estado:
-            saldo === 0 && total > 0
-              ? "Entregada"
-              : undefined
+          ...(ventaPagada ? { estado: "Entregada" } : {})
         })
-        .eq(
-          "id",
-          Number(formulario.orden_trabajo_id)
-        );
+        .eq("id", Number(formulario.orden_trabajo_id));
 
       if (ordenResultado.error) {
         console.error(ordenResultado.error);
@@ -772,8 +786,9 @@ function Ventas() {
 
     setGuardando(false);
 
-    const mensajeExito =
-      abono > 0
+    const mensajeExito = ventaPagada
+      ? `✓ Venta ${formulario.numero_venta.trim()} creada, cobrada, procesada en inventario y registrada en caja.`
+      : abono > 0
         ? `✓ Venta ${formulario.numero_venta.trim()} creada correctamente. Abono registrado: ${moneda(abono)}.`
         : `✓ Venta ${formulario.numero_venta.trim()} creada correctamente.`;
 
