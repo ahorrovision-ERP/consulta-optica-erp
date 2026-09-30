@@ -119,7 +119,10 @@ function Sidebar() {
         <ul>
 
           <li>
-            <Link to="/configuracion-optica">
+            <Link
+              to="/configuracion-optica"
+              className="config-link"
+            >
               <span className="menu-icon">⚙️</span>
 
               <span className="menu-configuracion">
