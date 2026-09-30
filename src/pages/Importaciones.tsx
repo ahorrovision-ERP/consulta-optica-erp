@@ -226,25 +226,68 @@ function Importaciones() {
         throw new Error("La hoja no contiene registros.");
       }
 
-      const filas = filasCrudas.map((fila) => ({
-        numero_formula: valorFila(fila, ["NFormula", "Número fórmula", "Numero formula"]),
-        fecha: convertirFechaExcel(fila[Object.keys(fila).find((key) => normalizarCabecera(key) === "fecha") || ""]),
-        fecha_control: convertirFechaExcel(fila[Object.keys(fila).find((key) => normalizarCabecera(key) === "fechacontrol") || ""]),
-        profesional: valorFila(fila, ["Profesional"]),
-        documento: valorFila(fila, ["Documento", "RUT", "Rut"]),
-        nombres: valorFila(fila, ["Nombres", "Nombre"]),
-        apellidos: valorFila(fila, ["Apellidos", "Apellido"]),
-        telefono: valorFila(fila, ["Celular", "Telefono", "Teléfono"]),
-        email: valorFila(fila, ["correo", "Email", "Correo"]),
-        tipo_cristal: valorFila(fila, ["Lente", "Tipo cristal"]),
-        rxod: valorFila(fila, ["RXOD"]),
-        rxoi: valorFila(fila, ["RXOI"]),
-        adicion_od: valorFila(fila, ["AdicionOD", "Adición OD"]),
-        adicion_oi: valorFila(fila, ["AdicionOI", "Adición OI"]),
-        agudeza_visual_od: valorFila(fila, ["AgudezaVLejanaOD", "Agudeza visual OD"]),
-        agudeza_visual_oi: valorFila(fila, ["AgudezaVLejanaOI", "Agudeza visual OI"]),
-        observaciones: valorFila(fila, ["Observaciones"])
-      }));
+      const filas = filasCrudas.map((fila) => {
+        // XLSX conserva las cabeceras originales (por ejemplo, "NFormula").
+        // Creamos una versión con cabeceras normalizadas para que la detección
+        // funcione aunque el archivo use espacios, tildes, guiones o mayúsculas.
+        const filaNormalizada = Object.fromEntries(
+          Object.entries(fila).map(([clave, valor]) => [
+            normalizarCabecera(clave),
+            valor
+          ])
+        );
+
+        return {
+          numero_formula: valorFila(filaNormalizada, [
+            "NFormula",
+            "Número fórmula",
+            "Numero formula"
+          ]),
+          fecha: convertirFechaExcel(filaNormalizada.fecha),
+          fecha_control: convertirFechaExcel(filaNormalizada.fechacontrol),
+          profesional: valorFila(filaNormalizada, ["Profesional"]),
+          documento: valorFila(filaNormalizada, [
+            "Documento",
+            "RUT",
+            "Rut"
+          ]),
+          nombres: valorFila(filaNormalizada, ["Nombres", "Nombre"]),
+          apellidos: valorFila(filaNormalizada, ["Apellidos", "Apellido"]),
+          telefono: valorFila(filaNormalizada, [
+            "Celular",
+            "Telefono",
+            "Teléfono"
+          ]),
+          email: valorFila(filaNormalizada, [
+            "correo",
+            "Email",
+            "Correo"
+          ]),
+          tipo_cristal: valorFila(filaNormalizada, [
+            "Lente",
+            "Tipo cristal"
+          ]),
+          rxod: valorFila(filaNormalizada, ["RXOD"]),
+          rxoi: valorFila(filaNormalizada, ["RXOI"]),
+          adicion_od: valorFila(filaNormalizada, [
+            "AdicionOD",
+            "Adición OD"
+          ]),
+          adicion_oi: valorFila(filaNormalizada, [
+            "AdicionOI",
+            "Adición OI"
+          ]),
+          agudeza_visual_od: valorFila(filaNormalizada, [
+            "AgudezaVLejanaOD",
+            "Agudeza visual OD"
+          ]),
+          agudeza_visual_oi: valorFila(filaNormalizada, [
+            "AgudezaVLejanaOI",
+            "Agudeza visual OI"
+          ]),
+          observaciones: valorFila(filaNormalizada, ["Observaciones"])
+        };
+      });
 
       setArchivo(file);
       setFilasImportacion(filas);
