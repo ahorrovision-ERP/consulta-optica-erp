@@ -5,10 +5,8 @@ import { Link } from "react-router-dom";
 function Sidebar() {
   return (
     <aside className="sidebar">
-
       {/* LOGO */}
       <div className="logo-container">
-
         <img
           src={logo}
           alt="Óptica Ahorro Visión"
@@ -20,17 +18,13 @@ function Sidebar() {
         <p className="subtitle">
           Sistema de Gestión Óptica
         </p>
-
       </div>
-
 
       {/* GENERAL */}
       <div className="grupo">
-
         <h4>GENERAL</h4>
 
         <ul>
-
           <li>
             <Link to="/">
               <span className="menu-icon">🏠</span>
@@ -58,19 +52,14 @@ function Sidebar() {
               <span>Historia Clínica</span>
             </Link>
           </li>
-
         </ul>
-
       </div>
-
 
       {/* INVENTARIO Y VENTAS */}
       <div className="grupo">
-
         <h4>INVENTARIO Y VENTAS</h4>
 
         <ul>
-
           <li>
             <Link to="/recetas">
               <span className="menu-icon">👓</span>
@@ -105,19 +94,14 @@ function Sidebar() {
               <span>Caja</span>
             </Link>
           </li>
-
         </ul>
-
       </div>
-
 
       {/* ADMINISTRACIÓN */}
       <div className="grupo">
-
         <h4>ADMINISTRACIÓN</h4>
 
         <ul>
-
           <li>
             <Link
               to="/configuracion-optica"
@@ -134,26 +118,26 @@ function Sidebar() {
                   de la Óptica
                 </span>
               </span>
-
             </Link>
           </li>
 
+          <li>
+            <Link to="/importaciones">
+              <span className="menu-icon">📥</span>
+              <span>Importaciones</span>
+            </Link>
+          </li>
         </ul>
-
       </div>
-
 
       {/* FOOTER */}
       <div className="sidebar-footer">
-
         <div className="branch-card">
-
           <div className="branch-icon">
             🏪
           </div>
 
           <div>
-
             <strong>
               Óptica Ahorro Visión
             </strong>
@@ -161,14 +145,10 @@ function Sidebar() {
             <p>
               Ñuñoa - Macul
             </p>
-
           </div>
-
         </div>
 
-
         <div className="user-info">
-
           <strong>
             Administrador
           </strong>
@@ -176,11 +156,8 @@ function Sidebar() {
           <p>
             Perfil Principal
           </p>
-
         </div>
-
       </div>
-
     </aside>
   );
 }
