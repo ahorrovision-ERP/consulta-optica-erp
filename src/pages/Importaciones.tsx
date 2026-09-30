@@ -4,7 +4,7 @@ import MainLayout from "../layout/MainLayout";
 import PageHeader from "../components/PageHeader";
 import { supabase } from "../lib/supabase";
 
-type FilaSoftix = {
+type FilaImportacion = {
   numero_formula: string;
   fecha: string | null;
   fecha_control: string | null;
@@ -153,7 +153,7 @@ function Importaciones() {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const [archivo, setArchivo] = useState<File | null>(null);
-  const [filasSoftix, setFilasSoftix] = useState<FilaSoftix[]>([]);
+  const [filasImportacion, setFilasImportacion] = useState<FilaImportacion[]>([]);
   const [preview, setPreview] = useState<Preview | null>(null);
   const [importaciones, setImportaciones] = useState<Importacion[]>([]);
 
@@ -165,8 +165,8 @@ function Importaciones() {
   const [errorMensaje, setErrorMensaje] = useState("");
 
   const filasConDocumento = useMemo(() => {
-    return filasSoftix.filter((fila) => normalizarDocumento(fila.documento));
-  }, [filasSoftix]);
+    return filasImportacion.filter((fila) => normalizarDocumento(fila.documento));
+  }, [filasImportacion]);
 
   useEffect(() => {
     cargarHistorial();
@@ -247,7 +247,7 @@ function Importaciones() {
       }));
 
       setArchivo(file);
-      setFilasSoftix(filas);
+      setFilasImportacion(filas);
 
       const porDocumento = new Map<string, Set<string>>();
       filas.forEach((fila) => {
@@ -291,11 +291,14 @@ function Importaciones() {
         .filter(Boolean);
 
       if (formulas.length > 0) {
+        const formulasSet = new Set(formulas);
         const { data: recetasData } = await supabase
           .from("recetas")
           .select("numero_formula");
 
-        recetasExistentes = (recetasData || []).length;
+        recetasExistentes = (recetasData || []).filter(
+          (receta) => receta.numero_formula && formulasSet.has(String(receta.numero_formula))
+        ).length;
       }
 
       const filasValidas = filas.filter(
@@ -350,12 +353,12 @@ function Importaciones() {
       });
 
       setMensaje(
-        `✓ Archivo leído: ${filas.length.toLocaleString("es-CL")} filas.`
+        `✓ Archivo analizado: ${filas.length.toLocaleString("es-CL")} filas.`
       );
     } catch (error: any) {
       console.error(error);
       setArchivo(null);
-      setFilasSoftix([]);
+      setFilasImportacion([]);
       setPreview(null);
       setErrorMensaje(
         error?.message || "No se pudo leer el archivo."
@@ -368,7 +371,7 @@ function Importaciones() {
   async function iniciarImportacion() {
     if (!archivo || filasConDocumento.length === 0 || !preview) {
       setErrorMensaje(
-        "Selecciona un Excel Softix válido antes de importar."
+        "Selecciona un archivo de datos válido antes de importar."
       );
       return;
     }
@@ -396,7 +399,7 @@ function Importaciones() {
         .from("importaciones")
         .insert({
           archivo_nombre: archivo.name,
-          tipo_importacion: "SOFTIX_PACIENTES_RECETAS",
+          tipo_importacion: "PACIENTES_RECETAS",
           estado: "PREPARADA",
           total_filas: filasConDocumento.length
         })
@@ -411,7 +414,7 @@ function Importaciones() {
       }
 
       const resultado = await supabase.rpc(
-        "importar_softix",
+        "importar_datos",
         {
           p_importacion_id: lote.id,
           p_filas: filasConDocumento
@@ -447,7 +450,7 @@ function Importaciones() {
       );
 
       setArchivo(null);
-      setFilasSoftix([]);
+      setFilasImportacion([]);
       setPreview(null);
 
       await cargarHistorial();
@@ -558,7 +561,7 @@ function Importaciones() {
           }}
         >
           <h2 style={{ margin: 0, color: "#222" }}>
-            Importación histórica Softix
+            Importación de Datos
           </h2>
 
           <p
@@ -568,7 +571,7 @@ function Importaciones() {
               fontSize: "14px"
             }}
           >
-            Un mismo archivo se separará automáticamente en pacientes y recetas. No se cargará todo dentro de Pacientes.
+            El archivo se analizará antes de guardar. Los datos se separarán automáticamente entre pacientes y recetas según las columnas detectadas.
           </p>
 
           <div
