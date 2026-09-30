@@ -141,32 +141,6 @@ function numeroSeguro(valor: string): number | null {
     : null;
 }
 
-function boolSeguro(valor: string): boolean | null {
-  if (!valor.trim()) {
-    return null;
-  }
-
-  const normalizado = normalizarCabecera(valor);
-
-  if (
-    ["si", "yes", "true", "1"].includes(
-      normalizado
-    )
-  ) {
-    return true;
-  }
-
-  if (
-    ["no", "false", "0"].includes(
-      normalizado
-    )
-  ) {
-    return false;
-  }
-
-  return null;
-}
-
 function Pacientes() {
   const [pacientesRegistros, setPacientesRegistros] =
     useState<Paciente[]>([]);
