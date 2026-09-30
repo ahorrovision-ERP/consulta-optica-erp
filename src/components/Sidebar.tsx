@@ -80,14 +80,20 @@ function Sidebar() {
           </li>
 
           <li>
-  <Link to="/inventario">
-    📦 Inventario
-  </Link>
-</li>
+            <Link to="/inventario">
+              📦 Inventario
+            </Link>
+          </li>
 
           <li>
             <Link to="/ventas">
               Ventas
+            </Link>
+          </li>
+
+          <li>
+            <Link to="/caja">
+              💰 Caja
             </Link>
           </li>
 
