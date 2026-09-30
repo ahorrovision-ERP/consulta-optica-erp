@@ -507,8 +507,12 @@ function Importaciones() {
       return;
     }
 
+    const TAMANO_LOTE = 150;
+    const totalLotes = Math.ceil(filasConDocumento.length / TAMANO_LOTE);
+
     const mensajeConfirmacion =
       `Se crearán/relacionarán ${preview.personasUnicas.toLocaleString("es-CL")} persona(s) a partir de ${preview.documentosUnicos.toLocaleString("es-CL")} RUT/documentos titulares y se procesarán ${preview.filasValidas.toLocaleString("es-CL")} receta(s).\n\n` +
+      `La importación se procesará en ${totalLotes} bloques para evitar tiempos de espera y cada bloque quedará registrado en el mismo lote.\n\n` +
       `Cuando un mismo RUT tenga más de una persona, cada persona quedará en una ficha independiente y ambas quedarán vinculadas al mismo RUT titular. No se fusionarán por RUT.\n\n` +
       `Los registros ya existentes para la misma persona + número de fórmula se omitirán.\n\n¿Continuar?`;
 
@@ -519,6 +523,12 @@ function Importaciones() {
     setImportando(true);
     setMensaje("");
     setErrorMensaje("");
+
+    let loteId: number | null = null;
+    let pacientesNuevosTotal = 0;
+    let recetasNuevasTotal = 0;
+    let omitidosTotal = 0;
+    let erroresTotal = 0;
 
     try {
       const { data: lote, error: loteError } = await supabase
@@ -539,40 +549,69 @@ function Importaciones() {
         );
       }
 
-      const resultado = await supabase.rpc(
-        "importar_datos",
-        {
-          p_importacion_id: lote.id,
-          p_filas: filasConDocumento
+      loteId = Number(lote.id);
+
+      for (let indice = 0; indice < totalLotes; indice += 1) {
+        const inicio = indice * TAMANO_LOTE;
+        const fin = Math.min(
+          inicio + TAMANO_LOTE,
+          filasConDocumento.length
+        );
+        const bloque = filasConDocumento.slice(inicio, fin);
+        const esUltimo = indice === totalLotes - 1;
+
+        setMensaje(
+          `Procesando importación #${loteId}: bloque ${indice + 1} de ${totalLotes}...`
+        );
+
+        const resultado = await supabase.rpc(
+          "importar_datos",
+          {
+            p_importacion_id: loteId,
+            p_filas: bloque,
+            p_final: esUltimo
+          }
+        );
+
+        if (resultado.error) {
+          await supabase
+            .from("importaciones")
+            .update({
+              estado: "ERROR",
+              fecha_fin: new Date().toISOString(),
+              observaciones:
+                `Error en bloque ${indice + 1} de ${totalLotes}: ${resultado.error.message}`
+            })
+            .eq("id", loteId);
+
+          throw new Error(
+            `La importación se detuvo en el bloque ${indice + 1} de ${totalLotes}: ${resultado.error.message}`
+          );
         }
-      );
 
-      if (resultado.error) {
-        await supabase
-          .from("importaciones")
-          .update({
-            estado: "ERROR",
-            fecha_fin: new Date().toISOString(),
-            observaciones: resultado.error.message
-          })
-          .eq("id", lote.id);
+        const datosResultado = resultado.data as {
+          pacientes_nuevos?: number;
+          recetas_nuevas?: number;
+          omitidos?: number;
+          errores?: number;
+        };
 
-        throw resultado.error;
+        pacientesNuevosTotal += numero(
+          datosResultado?.pacientes_nuevos
+        );
+        recetasNuevasTotal += numero(
+          datosResultado?.recetas_nuevas
+        );
+        omitidosTotal += numero(datosResultado?.omitidos);
+        erroresTotal += numero(datosResultado?.errores);
       }
 
-      const datosResultado = resultado.data as {
-        pacientes_nuevos: number;
-        recetas_nuevas: number;
-        omitidos: number;
-        errores: number;
-      };
-
       setMensaje(
-        `✓ Importación #${lote.id} completada. ` +
-          `${numero(datosResultado.pacientes_nuevos).toLocaleString("es-CL")} pacientes nuevos, ` +
-          `${numero(datosResultado.recetas_nuevas).toLocaleString("es-CL")} recetas nuevas, ` +
-          `${numero(datosResultado.omitidos).toLocaleString("es-CL")} omitidos y ` +
-          `${numero(datosResultado.errores).toLocaleString("es-CL")} errores.`
+        `✓ Importación #${loteId} completada. ` +
+          `${pacientesNuevosTotal.toLocaleString("es-CL")} pacientes nuevos, ` +
+          `${recetasNuevasTotal.toLocaleString("es-CL")} recetas nuevas, ` +
+          `${omitidosTotal.toLocaleString("es-CL")} omitidos y ` +
+          `${erroresTotal.toLocaleString("es-CL")} errores.`
       );
 
       setArchivo(null);
@@ -583,8 +622,10 @@ function Importaciones() {
     } catch (error: any) {
       console.error(error);
       setErrorMensaje(
-        error?.message || "No se pudo completar la importación."
+        error?.message ||
+          "No se pudo completar la importación."
       );
+      await cargarHistorial();
     } finally {
       setImportando(false);
       if (inputRef.current) {
@@ -594,12 +635,12 @@ function Importaciones() {
   }
 
   async function deshacerImportacion(importacion: Importacion) {
-    if (importacion.estado !== "COMPLETADA") {
+    if (!["COMPLETADA", "PROCESANDO", "ERROR"].includes(importacion.estado)) {
       return;
     }
 
     const confirmar = window.confirm(
-      `¿Deshacer la importación #${importacion.id}?\n\nArchivo: ${importacion.archivo_nombre || "-"}\n\nSolo se eliminarán los registros que ese lote creó. Los pacientes y recetas que ya existían antes no serán eliminados.`
+      `¿Deshacer la importación #${importacion.id}?\n\nArchivo: ${importacion.archivo_nombre || "-"}\nEstado: ${importacion.estado}\n\nSolo se eliminarán los registros que ese lote alcanzó a crear. Los pacientes y recetas que ya existían antes no serán eliminados.`
     );
 
     if (!confirmar) return;
@@ -1080,7 +1121,7 @@ function Importaciones() {
                       </td>
 
                       <td style={tdStyle}>
-                        {importacion.estado === "COMPLETADA" && (
+                        {["COMPLETADA", "PROCESANDO", "ERROR"].includes(importacion.estado) && (
                           <button
                             type="button"
                             disabled={deshaciendo === importacion.id}
