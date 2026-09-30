@@ -51,9 +51,15 @@ function App() {
           element={<Ventas />}
         />
 
-        <Route path="/inventario" element={<Productos />} />
+        <Route path="/inventario"
+          element={<Productos />} 
+          />
         
-        <Route
+        <Route path="/configuracion-optica" 
+          element={<ConfiguracionOptica />} 
+          />
+ 
+          <Route
           path="/configuracion-optica"
           element={<ConfiguracionOptica />}
         />
