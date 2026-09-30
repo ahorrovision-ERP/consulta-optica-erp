@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import type { CSSProperties } from "react";
 import { supabase } from "../lib/supabase";
 
 import MainLayout from "../layout/MainLayout";
@@ -125,9 +126,23 @@ function Caja() {
         throw ventasError;
       }
 
-      setCaja(cajaData || null);
+      setCaja((cajaData || null) as CajaDiaria | null);
       setAbonos((abonosData || []) as Abono[]);
-      setVentas((ventasData || []) as Venta[]);
+
+      const ventasNormalizadas: Venta[] = (
+        (ventasData || []) as any[]
+      ).map((venta) => ({
+        id: venta.id,
+        numero_venta: venta.numero_venta,
+        fecha: venta.fecha,
+        total: venta.total,
+        estado: venta.estado,
+        paciente: Array.isArray(venta.paciente)
+          ? venta.paciente[0] || null
+          : venta.paciente || null
+      }));
+
+      setVentas(ventasNormalizadas);
 
       setAperturaInput(
         cajaData
@@ -147,6 +162,7 @@ function Caja() {
 
   function obtenerDiaSiguiente(fechaBase: string) {
     const fechaObj = new Date(`${fechaBase}T12:00:00`);
+
     fechaObj.setDate(fechaObj.getDate() + 1);
 
     const anio = fechaObj.getFullYear();
@@ -209,14 +225,16 @@ function Caja() {
 
     try {
       if (caja) {
+        const nuevoCierre =
+          apertura +
+          Number(caja.ingresos || 0) -
+          Number(caja.egresos || 0);
+
         const { data, error } = await supabase
           .from("caja_diaria")
           .update({
             apertura,
-            cierre:
-              apertura +
-              Number(caja.ingresos || 0) -
-              Number(caja.egresos || 0)
+            cierre: nuevoCierre
           })
           .eq("id", caja.id)
           .select()
@@ -228,7 +246,9 @@ function Caja() {
 
         setCaja(data as CajaDiaria);
 
-        setMensaje("Apertura actualizada correctamente.");
+        setMensaje(
+          "Apertura actualizada correctamente."
+        );
       } else {
         const { data, error } = await supabase
           .from("caja_diaria")
@@ -238,7 +258,8 @@ function Caja() {
             ingresos: 0,
             egresos: 0,
             cierre: apertura,
-            observaciones: "Caja creada desde el módulo Caja"
+            observaciones:
+              "Caja creada desde el módulo Caja"
           })
           .select()
           .single();
@@ -249,13 +270,16 @@ function Caja() {
 
         setCaja(data as CajaDiaria);
 
-        setMensaje("Caja abierta correctamente.");
+        setMensaje(
+          "Caja abierta correctamente."
+        );
       }
     } catch (error: any) {
       console.error(error);
 
       setErrorMensaje(
-        error?.message || "No fue posible guardar la apertura."
+        error?.message ||
+          "No fue posible guardar la apertura."
       );
     } finally {
       setGuardando(false);
@@ -271,7 +295,9 @@ function Caja() {
     }
 
     if (!caja) {
-      alert("Primero debes abrir la caja del día.");
+      alert(
+        "Primero debes abrir la caja del día."
+      );
       return;
     }
 
@@ -322,12 +348,15 @@ function Caja() {
       setCaja(data as CajaDiaria);
       setEgresoInput("");
 
-      setMensaje("Egreso registrado correctamente.");
+      setMensaje(
+        "Egreso registrado correctamente."
+      );
     } catch (error: any) {
       console.error(error);
 
       setErrorMensaje(
-        error?.message || "No fue posible registrar el egreso."
+        error?.message ||
+          "No fue posible registrar el egreso."
       );
     } finally {
       setGuardando(false);
@@ -336,7 +365,9 @@ function Caja() {
 
   async function actualizarCierre() {
     if (!caja) {
-      alert("No existe una caja abierta para esta fecha.");
+      alert(
+        "No existe una caja abierta para esta fecha."
+      );
       return;
     }
 
@@ -365,12 +396,15 @@ function Caja() {
 
       setCaja(data as CajaDiaria);
 
-      setMensaje("Cierre actualizado correctamente.");
+      setMensaje(
+        "Cierre actualizado correctamente."
+      );
     } catch (error: any) {
       console.error(error);
 
       setErrorMensaje(
-        error?.message || "No fue posible actualizar el cierre."
+        error?.message ||
+          "No fue posible actualizar el cierre."
       );
     } finally {
       setGuardando(false);
@@ -390,13 +424,16 @@ function Caja() {
 
     abonos.forEach((abono) => {
       const metodo =
-        abono.metodo_pago?.trim() || "Sin especificar";
+        abono.metodo_pago?.trim() ||
+        "Sin especificar";
 
       if (!resumen[metodo]) {
         resumen[metodo] = 0;
       }
 
-      resumen[metodo] += Number(abono.monto || 0);
+      resumen[metodo] += Number(
+        abono.monto || 0
+      );
     });
 
     return Object.entries(resumen).sort(
@@ -566,7 +603,9 @@ function Caja() {
                   color: "#222"
                 }}
               >
-                {formatearMonto(totalApertura)}
+                {formatearMonto(
+                  totalApertura
+                )}
               </div>
             </div>
 
@@ -595,7 +634,9 @@ function Caja() {
                   color: "#16823a"
                 }}
               >
-                {formatearMonto(totalIngresosCaja)}
+                {formatearMonto(
+                  totalIngresosCaja
+                )}
               </div>
             </div>
 
@@ -624,7 +665,9 @@ function Caja() {
                   color: "#c62828"
                 }}
               >
-                {formatearMonto(totalEgresosCaja)}
+                {formatearMonto(
+                  totalEgresosCaja
+                )}
               </div>
             </div>
 
@@ -652,7 +695,9 @@ function Caja() {
                   color: "#ffffff"
                 }}
               >
-                {formatearMonto(totalCierre)}
+                {formatearMonto(
+                  totalCierre
+                )}
               </div>
             </div>
           </div>
@@ -692,7 +737,8 @@ function Caja() {
                   fontSize: "14px"
                 }}
               >
-                Ingresa o actualiza el monto inicial de la caja.
+                Ingresa o actualiza el monto inicial de
+                la caja.
               </p>
 
               <input
@@ -700,7 +746,9 @@ function Caja() {
                 min="0"
                 value={aperturaInput}
                 onChange={(e) =>
-                  setAperturaInput(e.target.value)
+                  setAperturaInput(
+                    e.target.value
+                  )
                 }
                 placeholder="Monto de apertura"
                 style={{
@@ -727,7 +775,9 @@ function Caja() {
                   fontSize: "15px",
                   fontWeight: 700,
                   cursor: "pointer",
-                  opacity: guardando ? 0.6 : 1
+                  opacity: guardando
+                    ? 0.6
+                    : 1
                 }}
               >
                 {caja
@@ -761,7 +811,8 @@ function Caja() {
                   fontSize: "14px"
                 }}
               >
-                Registra una salida manual de dinero de la caja.
+                Registra una salida manual de dinero de
+                la caja.
               </p>
 
               <input
@@ -769,10 +820,14 @@ function Caja() {
                 min="0"
                 value={egresoInput}
                 onChange={(e) =>
-                  setEgresoInput(e.target.value)
+                  setEgresoInput(
+                    e.target.value
+                  )
                 }
                 placeholder="Monto del egreso"
-                disabled={!caja || guardando}
+                disabled={
+                  !caja || guardando
+                }
                 style={{
                   width: "100%",
                   boxSizing: "border-box",
@@ -786,7 +841,9 @@ function Caja() {
 
               <button
                 onClick={registrarEgreso}
-                disabled={!caja || guardando}
+                disabled={
+                  !caja || guardando
+                }
                 style={{
                   width: "100%",
                   padding: "13px",
@@ -846,7 +903,8 @@ function Caja() {
                     padding: "20px 0"
                   }}
                 >
-                  No hay abonos registrados para esta fecha.
+                  No hay abonos registrados para esta
+                  fecha.
                 </div>
               ) : (
                 <div>
@@ -856,7 +914,8 @@ function Caja() {
                         key={metodo}
                         style={{
                           display: "flex",
-                          justifyContent: "space-between",
+                          justifyContent:
+                            "space-between",
                           alignItems: "center",
                           padding: "14px 0",
                           borderBottom:
@@ -887,15 +946,20 @@ function Caja() {
                   <div
                     style={{
                       display: "flex",
-                      justifyContent: "space-between",
+                      justifyContent:
+                        "space-between",
                       paddingTop: "18px",
                       fontWeight: 700
                     }}
                   >
-                    <span>Total abonos del día</span>
+                    <span>
+                      Total abonos del día
+                    </span>
 
                     <span>
-                      {formatearMonto(totalAbonos)}
+                      {formatearMonto(
+                        totalAbonos
+                      )}
                     </span>
                   </div>
                 </div>
@@ -929,8 +993,8 @@ function Caja() {
                     color: "#8a6500"
                   }}
                 >
-                  No existe una caja registrada para esta fecha.
-                  Ingresa una apertura para comenzar.
+                  No existe una caja registrada para esta
+                  fecha. Ingresa una apertura para comenzar.
                 </div>
               ) : (
                 <>
@@ -1000,13 +1064,17 @@ function Caja() {
                     style={{
                       width: "100%",
                       padding: "13px",
-                      border: "1px solid #d5d5d5",
+                      border:
+                        "1px solid #d5d5d5",
                       borderRadius: "10px",
                       background: "#ffffff",
                       color: "#222",
                       fontSize: "15px",
                       fontWeight: 700,
-                      cursor: "pointer"
+                      cursor: "pointer",
+                      opacity: guardando
+                        ? 0.6
+                        : 1
                     }}
                   >
                     Actualizar cierre
@@ -1029,7 +1097,8 @@ function Caja() {
             <div
               style={{
                 display: "flex",
-                justifyContent: "space-between",
+                justifyContent:
+                  "space-between",
                 alignItems: "center",
                 gap: "15px",
                 flexWrap: "wrap",
@@ -1054,8 +1123,8 @@ function Caja() {
                     fontSize: "14px"
                   }}
                 >
-                  {ventasPagadas.length} venta(s) pagada(s)
-                  o entregada(s)
+                  {ventasPagadas.length} venta(s)
+                  pagada(s) o entregada(s)
                 </p>
               </div>
 
@@ -1066,7 +1135,9 @@ function Caja() {
                   color: "#cc001f"
                 }}
               >
-                {formatearMonto(totalIngresosCaja)}
+                {formatearMonto(
+                  totalIngresosCaja
+                )}
               </div>
             </div>
 
@@ -1080,7 +1151,8 @@ function Caja() {
                   borderRadius: "12px"
                 }}
               >
-                No hay ventas registradas para esta fecha.
+                No hay ventas registradas para esta
+                fecha.
               </div>
             ) : (
               <div
@@ -1091,7 +1163,8 @@ function Caja() {
                 <table
                   style={{
                     width: "100%",
-                    borderCollapse: "collapse"
+                    borderCollapse:
+                      "collapse"
                   }}
                 >
                   <thead>
@@ -1115,7 +1188,8 @@ function Caja() {
                       <th
                         style={{
                           ...thStyle,
-                          textAlign: "right"
+                          textAlign:
+                            "right"
                         }}
                       >
                         Total
@@ -1125,28 +1199,49 @@ function Caja() {
 
                   <tbody>
                     {ventas.map((venta) => (
-                      <tr key={venta.id}>
-                        <td style={tdStyle}>
+                      <tr
+                        key={venta.id}
+                      >
+                        <td
+                          style={
+                            tdStyle
+                          }
+                        >
                           <strong>
-                            {venta.numero_venta}
+                            {
+                              venta.numero_venta
+                            }
                           </strong>
                         </td>
 
-                        <td style={tdStyle}>
+                        <td
+                          style={
+                            tdStyle
+                          }
+                        >
                           {venta.paciente
                             ? `${venta.paciente.nombres} ${
-                                venta.paciente.apellidos || ""
+                                venta.paciente.apellidos ||
+                                ""
                               }`
                             : "Sin paciente"}
                         </td>
 
-                        <td style={tdStyle}>
+                        <td
+                          style={
+                            tdStyle
+                          }
+                        >
                           {formatearHora(
                             venta.fecha
                           )}
                         </td>
 
-                        <td style={tdStyle}>
+                        <td
+                          style={
+                            tdStyle
+                          }
+                        >
                           <span
                             style={{
                               display:
@@ -1157,24 +1252,27 @@ function Caja() {
                                 "20px",
                               fontSize:
                                 "12px",
-                              fontWeight: 700,
+                              fontWeight:
+                                700,
                               background:
                                 venta.estado ===
-                                "Pagada" ||
+                                  "Pagada" ||
                                 venta.estado ===
-                                "Entregada"
+                                  "Entregada"
                                   ? "#edf9f0"
                                   : "#f5f5f5",
                               color:
                                 venta.estado ===
-                                "Pagada" ||
+                                  "Pagada" ||
                                 venta.estado ===
-                                "Entregada"
+                                  "Entregada"
                                   ? "#25713a"
                                   : "#666"
                             }}
                           >
-                            {venta.estado}
+                            {
+                              venta.estado
+                            }
                           </span>
                         </td>
 
@@ -1183,7 +1281,8 @@ function Caja() {
                             ...tdStyle,
                             textAlign:
                               "right",
-                            fontWeight: 700
+                            fontWeight:
+                              700
                           }}
                         >
                           {formatearMonto(
@@ -1231,7 +1330,8 @@ function Caja() {
                   borderRadius: "12px"
                 }}
               >
-                No hay ingresos registrados para esta fecha.
+                No hay ingresos registrados para esta
+                fecha.
               </div>
             ) : (
               <div
@@ -1242,7 +1342,8 @@ function Caja() {
                 <table
                   style={{
                     width: "100%",
-                    borderCollapse: "collapse"
+                    borderCollapse:
+                      "collapse"
                   }}
                 >
                   <thead>
@@ -1266,7 +1367,8 @@ function Caja() {
                       <th
                         style={{
                           ...thStyle,
-                          textAlign: "right"
+                          textAlign:
+                            "right"
                         }}
                       >
                         Monto
@@ -1334,7 +1436,8 @@ function Caja() {
                                 "right",
                               color:
                                 "#16823a",
-                              fontWeight: 700
+                              fontWeight:
+                                700
                             }}
                           >
                             {formatearMonto(
@@ -1358,7 +1461,7 @@ function Caja() {
   );
 }
 
-const thStyle: React.CSSProperties = {
+const thStyle: CSSProperties = {
   textAlign: "left",
   padding: "13px 10px",
   borderBottom: "2px solid #eeeeee",
@@ -1367,7 +1470,7 @@ const thStyle: React.CSSProperties = {
   fontWeight: 700
 };
 
-const tdStyle: React.CSSProperties = {
+const tdStyle: CSSProperties = {
   padding: "14px 10px",
   borderBottom: "1px solid #eeeeee",
   color: "#444",
