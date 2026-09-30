@@ -10,6 +10,7 @@ import Ventas from "./pages/Ventas";
 import Caja from "./pages/Caja";
 import Productos from "./pages/Productos";
 import ConfiguracionOptica from "./pages/ConfiguracionOptica";
+import Importaciones from "./pages/Importaciones";
 
 function App() {
   return (
@@ -68,6 +69,11 @@ function App() {
           <Route
           path="/configuracion-optica"
           element={<ConfiguracionOptica />}
+        />
+
+        <Route
+          path="/importaciones"
+          element={<Importaciones />}
         />
 
       </Routes>
