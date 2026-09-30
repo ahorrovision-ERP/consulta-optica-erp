@@ -121,3 +121,32 @@
 .user-info p{
     color:#d5d5d5;
 }
+
+/* ICONOS DEL MENU */
+.menu-icon {
+  width: 28px;
+  min-width: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+
+/* CONFIGURACION EN DOS LINEAS */
+.menu-configuracion {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.menu-configuracion-principal {
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.menu-configuracion-secundario {
+  font-size: 13px;
+  font-weight: 400;
+  opacity: 0.85;
+  margin-top: 2px;
+}
