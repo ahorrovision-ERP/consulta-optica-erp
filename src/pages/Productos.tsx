@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type CSSProperties } from "react";
+import * as XLSX from "xlsx";
 import MainLayout from "../layout/MainLayout";
 import PageHeader from "../components/PageHeader";
 import { supabase } from "../lib/supabase";
@@ -211,6 +212,103 @@ function parsearCSV(texto: string): Record<string, string>[] {
 
     return fila;
   });
+}
+
+
+async function leerFilasExcel(
+  archivo: File
+): Promise<Record<string, string>[]> {
+  const buffer = await archivo.arrayBuffer();
+
+  const libro = XLSX.read(buffer, {
+    type: "array",
+    cellDates: false
+  });
+
+  if (libro.SheetNames.length === 0) {
+    return [];
+  }
+
+  const nombreHoja = libro.SheetNames.includes("Hoja1")
+    ? "Hoja1"
+    : libro.SheetNames[0];
+
+  const hoja = libro.Sheets[nombreHoja];
+
+  if (!hoja) {
+    return [];
+  }
+
+  const filas = XLSX.utils.sheet_to_json<Record<string, unknown>>(
+    hoja,
+    {
+      defval: "",
+      raw: false
+    }
+  );
+
+  return filas.map((fila) => {
+    const resultado: Record<string, string> = {};
+
+    Object.entries(fila).forEach(([cabecera, valor]) => {
+      resultado[normalizarCabecera(cabecera)] =
+        String(valor ?? "").trim();
+    });
+
+    return resultado;
+  });
+}
+
+async function leerArchivoProductos(
+  archivo: File
+): Promise<Record<string, string>[]> {
+  const nombre = archivo.name.toLowerCase();
+
+  if (
+    nombre.endsWith(".xlsx") ||
+    nombre.endsWith(".xls")
+  ) {
+    return leerFilasExcel(archivo);
+  }
+
+  return parsearCSV(await archivo.text());
+}
+
+function escaparHTML(valor: unknown): string {
+  return String(valor ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function tipoProductoPorArchivo(
+  nombreArchivo: string
+): string {
+  const nombre = normalizarCabecera(
+    nombreArchivo
+  );
+
+  if (
+    nombre.includes("cristales") ||
+    nombre.includes("cristal") ||
+    nombre.includes("lentes") ||
+    nombre.includes("lente")
+  ) {
+    return "CRISTAL";
+  }
+
+  if (
+    nombre.includes("monturas") ||
+    nombre.includes("montura") ||
+    nombre.includes("armazones") ||
+    nombre.includes("armazon")
+  ) {
+    return "ARMAZON";
+  }
+
+  return "OTRO";
 }
 
 function valorCSV(fila: Record<string, string>, nombres: string[]): string {
@@ -620,7 +718,7 @@ function Productos() {
     );
   }
 
-  function exportarCSV() {
+  function construirFilasExportacion() {
     const encabezados = [
       "ID",
       "Código",
@@ -632,140 +730,111 @@ function Productos() {
       "Modelo",
       "Color",
       "Material",
-      "Índice",
-      "Esfera mín",
-      "Esfera máx",
-      "Cilindro mín",
-      "Cilindro máx",
+      "Índice de refracción",
+      "Esfera mínima",
+      "Esfera máxima",
+      "Cilindro mínimo",
+      "Cilindro máximo",
       "Tratamiento",
       "Stock",
       "Stock mínimo",
       "Precio compra",
       "Precio venta",
-      "Proveedor/Marca",
-      "Ubicación",
-      "Activo"
-    ];
-
-    const filas = productosFiltrados.map((producto) => [
-      producto.id,
-      producto.codigo || "",
-      producto.referencia || "",
-      producto.nombre,
-      etiquetaTipo(producto.tipo_producto),
-      textoCategoria(categoriaPorId.get(producto.categoria_id || -1)),
-      producto.marca || "",
-      producto.modelo || "",
-      producto.color || "",
-      producto.material || "",
-      producto.indice_refraccion ?? "",
-      producto.esfera_min ?? "",
-      producto.esfera_max ?? "",
-      producto.cilindro_min ?? "",
-      producto.cilindro_max ?? "",
-      producto.tratamiento || "",
-      numero(producto.stock),
-      numero(producto.stock_minimo),
-      numero(producto.precio_compra),
-      numero(producto.precio_venta),
-      producto.proveedor_marca || "",
-      producto.ubicacion || "",
-      producto.activo === false ? "No" : "Sí"
-    ]);
-
-    const escapar = (valor: unknown) => {
-      const texto = String(valor ?? "");
-      return `"${texto.replace(/"/g, '""')}"`;
-    };
-
-    const csv = [encabezados, ...filas]
-      .map((fila) => fila.map(escapar).join(";"))
-      .join("\r\n");
-
-    const blob = new Blob(["\uFEFF" + csv], {
-      type: "text/csv;charset=utf-8;"
-    });
-    const url = URL.createObjectURL(blob);
-    const enlace = document.createElement("a");
-    enlace.href = url;
-    enlace.download = `inventario-ahorro-vision-${new Date().toISOString().slice(0, 10)}.csv`;
-    document.body.appendChild(enlace);
-    enlace.click();
-    enlace.remove();
-    URL.revokeObjectURL(url);
-  }
-
-
-  function descargarPlantillaCSV() {
-    const encabezados = [
-      "Código",
-      "Referencia",
-      "Nombre",
-      "Tipo",
-      "Categoría",
-      "Marca",
-      "Modelo",
-      "Color",
-      "Material",
-      "Índice",
-      "Esfera mín",
-      "Esfera máx",
-      "Cilindro mín",
-      "Cilindro máx",
-      "Tratamiento",
-      "Stock",
-      "Stock mínimo",
-      "Precio compra",
-      "Precio venta",
-      "Proveedor/Marca",
+      "Proveedor / Marca",
       "Ubicación",
       "Activo",
       "Observaciones"
     ];
 
-    const ejemplo = [
-      "RB5228-001",
-      "RX5228",
-      "Armazón Ray-Ban RX5228",
-      "ARMAZON",
-      "",
-      "Ray-Ban",
-      "RX5228",
-      "Negro",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "",
-      "5",
-      "1",
-      "50000",
-      "69990",
-      "Proveedor",
-      "Vitrina 1",
-      "Sí",
-      "Producto importado"
-    ];
+    const filas = productosFiltrados.map(
+      (producto) => [
+        producto.id,
+        producto.codigo || "",
+        producto.referencia || "",
+        producto.nombre,
+        etiquetaTipo(producto.tipo_producto),
+        textoCategoria(
+          categoriaPorId.get(
+            producto.categoria_id || -1
+          )
+        ),
+        producto.marca || "",
+        producto.modelo || "",
+        producto.color || "",
+        producto.material || "",
+        producto.indice_refraccion ?? "",
+        producto.esfera_min ?? "",
+        producto.esfera_max ?? "",
+        producto.cilindro_min ?? "",
+        producto.cilindro_max ?? "",
+        producto.tratamiento || "",
+        numero(producto.stock),
+        numero(producto.stock_minimo),
+        numero(producto.precio_compra),
+        numero(producto.precio_venta),
+        producto.proveedor_marca || "",
+        producto.ubicacion || "",
+        producto.activo === false
+          ? "No"
+          : "Sí",
+        producto.observaciones || ""
+      ]
+    );
 
-    const escapar = (valor: unknown) =>
-      `"${String(valor ?? "").replace(/"/g, '""')}"`;
+    return {
+      encabezados,
+      filas
+    };
+  }
 
-    const csv = [encabezados, ejemplo]
-      .map((fila) => fila.map(escapar).join(";"))
+  function exportarCSV() {
+    const { encabezados, filas } =
+      construirFilasExportacion();
+
+    if (filas.length === 0) {
+      alert(
+        "No hay productos para exportar."
+      );
+      return;
+    }
+
+    const escapar = (valor: unknown) => {
+      const texto = String(valor ?? "");
+      return `"${texto.replace(
+        /"/g,
+        '""'
+      )}"`;
+    };
+
+    const csv = [
+      encabezados,
+      ...filas
+    ]
+      .map((fila) =>
+        fila
+          .map(escapar)
+          .join(";")
+      )
       .join("\r\n");
 
-    const blob = new Blob(["\uFEFF" + csv], {
-      type: "text/csv;charset=utf-8;"
-    });
+    const blob = new Blob(
+      ["\uFEFF" + csv],
+      {
+        type: "text/csv;charset=utf-8;"
+      }
+    );
 
-    const url = URL.createObjectURL(blob);
-    const enlace = document.createElement("a");
+    const url =
+      URL.createObjectURL(blob);
+
+    const enlace =
+      document.createElement("a");
 
     enlace.href = url;
     enlace.download =
-      "plantilla-importacion-inventario-ahorro-vision.csv";
+      `inventario-ahorro-vision-${new Date()
+        .toISOString()
+        .slice(0, 10)}.csv`;
 
     document.body.appendChild(enlace);
     enlace.click();
@@ -774,9 +843,148 @@ function Productos() {
     URL.revokeObjectURL(url);
   }
 
+  function exportarExcel() {
+    const { encabezados, filas } =
+      construirFilasExportacion();
 
-  async function importarCSV(evento: ChangeEvent<HTMLInputElement>) {
+    if (filas.length === 0) {
+      alert(
+        "No hay productos para exportar."
+      );
+      return;
+    }
+
+    const hoja =
+      XLSX.utils.aoa_to_sheet([
+        encabezados,
+        ...filas
+      ]);
+
+    hoja["!cols"] = [
+      { wch: 8 },
+      { wch: 16 },
+      { wch: 18 },
+      { wch: 32 },
+      { wch: 16 },
+      { wch: 20 },
+      { wch: 18 },
+      { wch: 18 },
+      { wch: 16 },
+      { wch: 18 },
+      { wch: 18 },
+      { wch: 16 },
+      { wch: 16 },
+      { wch: 18 },
+      { wch: 18 },
+      { wch: 30 },
+      { wch: 10 },
+      { wch: 14 },
+      { wch: 16 },
+      { wch: 16 },
+      { wch: 24 },
+      { wch: 20 },
+      { wch: 10 },
+      { wch: 40 }
+    ];
+
+    const libro =
+      XLSX.utils.book_new();
+
+    XLSX.utils.book_append_sheet(
+      libro,
+      hoja,
+      "Inventario"
+    );
+
+    XLSX.writeFile(
+      libro,
+      `inventario-ahorro-vision-${new Date()
+        .toISOString()
+        .slice(0, 10)}.xlsx`
+    );
+  }
+
+  function descargarPlantillaExcel() {
+    const encabezados = [
+      "identificador",
+      "marca",
+      "referencia",
+      "Tipo",
+      "material",
+      "color",
+      "categoria",
+      "precio venta + iva",
+      "precio compra + iva",
+      "% descuento",
+      "% comision",
+      "cantidad",
+      "proveedor",
+      "horizontal",
+      "vertical",
+      "puente",
+      "Dmecanica",
+      "Defectiva"
+    ];
+
+    const ejemplo = [
+      "M1",
+      "Ray-Ban",
+      "RX5228",
+      "COMPLETA",
+      "Acetato",
+      "Negro",
+      "ADULTO",
+      69990,
+      50000,
+      0,
+      0,
+      5,
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ];
+
+    const hoja =
+      XLSX.utils.aoa_to_sheet([
+        encabezados,
+        ejemplo
+      ]);
+
+    hoja["!cols"] =
+      encabezados.map(
+        (_, indice) => ({
+          wch:
+            indice === 6
+              ? 18
+              : indice >= 13
+                ? 14
+                : 20
+        })
+      );
+
+    const libro =
+      XLSX.utils.book_new();
+
+    XLSX.utils.book_append_sheet(
+      libro,
+      hoja,
+      "Hoja1"
+    );
+
+    XLSX.writeFile(
+      libro,
+      "plantilla-importacion-productos-ahorro-vision.xlsx"
+    );
+  }
+
+  async function importarArchivo(
+    evento: ChangeEvent<HTMLInputElement>
+  ) {
     const archivo = evento.target.files?.[0];
+
     if (!archivo) return;
 
     setImportando(true);
@@ -784,131 +992,693 @@ function Productos() {
     setError("");
 
     try {
-      const texto = await archivo.text();
-      const filas = parsearCSV(texto);
+      const filas =
+        await leerArchivoProductos(
+          archivo
+        );
 
       if (filas.length === 0) {
-        throw new Error("El archivo no contiene filas válidas.");
+        throw new Error(
+          "El archivo no contiene filas válidas."
+        );
       }
 
-      const registros = filas.map((fila) => {
-        const tipoOriginal = valorCSV(fila, ["Tipo", "Tipo producto", "TipoProducto"]);
-        const tipoNormalizado = normalizarCabecera(tipoOriginal);
+      const { data: existentes, error: existentesError } =
+        await supabase
+          .from("productos")
+          .select("id, codigo");
 
-        let tipo = "OTRO";
-        if (["armazon", "frame", "montura"].includes(tipoNormalizado)) tipo = "ARMAZON";
-        if (["cristal", "lente", "lens"].includes(tipoNormalizado)) tipo = "CRISTAL";
-        if (["tratamiento"].includes(tipoNormalizado)) tipo = "TRATAMIENTO";
-        if (["accesorio"].includes(tipoNormalizado)) tipo = "ACCESORIO";
+      if (existentesError) {
+        throw existentesError;
+      }
 
-        const nombreCategoria = valorCSV(fila, ["Categoría", "Categoria", "Nombre categoría", "Nombre categoria"]);
-        let categoriaId: number | null = null;
+      const codigosExistentes =
+        new Set(
+          (existentes || [])
+            .map((item) =>
+              String(
+                item.codigo || ""
+              )
+                .trim()
+                .toLowerCase()
+            )
+            .filter(Boolean)
+        );
+
+      const codigosArchivo =
+        new Set<string>();
+
+      const tipoInferido =
+        tipoProductoPorArchivo(
+          archivo.name
+        );
+
+      const registros: Array<Record<string, any>> =
+        [];
+
+      const erroresFila: string[] =
+        [];
+
+      for (
+        let indice = 0;
+        indice < filas.length;
+        indice += 1
+      ) {
+        const fila = filas[indice];
+
+        const codigo =
+          valorCSV(fila, [
+            "Código",
+            "Codigo",
+            "identificador",
+            "ID producto",
+            "SKU"
+          ]);
+
+        const marca =
+          valorCSV(fila, [
+            "Marca"
+          ]);
+
+        const referencia =
+          valorCSV(fila, [
+            "Referencia",
+            "Ref"
+          ]);
+
+        const nombreDirecto =
+          valorCSV(fila, [
+            "Nombre",
+            "Nombre comercial",
+            "Producto"
+          ]);
+
+        const nombre =
+          nombreDirecto ||
+          [marca, referencia || codigo]
+            .filter(Boolean)
+            .join(" ")
+            .trim();
+
+        if (!nombre) {
+          erroresFila.push(
+            `Fila ${indice + 2}: no se pudo determinar el nombre del producto.`
+          );
+          continue;
+        }
+
+        const codigoNormalizado =
+          codigo
+            .trim()
+            .toLowerCase();
+
+        if (
+          codigoNormalizado &&
+          (
+            codigosExistentes.has(
+              codigoNormalizado
+            ) ||
+            codigosArchivo.has(
+              codigoNormalizado
+            )
+          )
+        ) {
+          erroresFila.push(
+            `Fila ${indice + 2}: el código ${codigo} ya existe o está repetido; se omitió.`
+          );
+          continue;
+        }
+
+        if (codigoNormalizado) {
+          codigosArchivo.add(
+            codigoNormalizado
+          );
+        }
+
+        const tipoOriginal =
+          valorCSV(fila, [
+            "Tipo",
+            "Tipo producto",
+            "TipoProducto"
+          ]);
+
+        const tipoNormalizado =
+          normalizarCabecera(
+            tipoOriginal
+          );
+
+        let tipo = tipoInferido;
+
+        if (
+          [
+            "cristal",
+            "lente",
+            "lens"
+          ].includes(
+            tipoNormalizado
+          )
+        ) {
+          tipo = "CRISTAL";
+        } else if (
+          [
+            "armazon",
+            "montura",
+            "frame"
+          ].includes(
+            tipoNormalizado
+          )
+        ) {
+          tipo = "ARMAZON";
+        } else if (
+          [
+            "tratamiento"
+          ].includes(
+            tipoNormalizado
+          )
+        ) {
+          tipo = "TRATAMIENTO";
+        } else if (
+          [
+            "accesorio"
+          ].includes(
+            tipoNormalizado
+          )
+        ) {
+          tipo = "ACCESORIO";
+        }
+
+        const nombreCategoria =
+          valorCSV(fila, [
+            "Categoría",
+            "Categoria",
+            "categoria",
+            "Nombre categoría",
+            "Nombre categoria"
+          ]);
+
+        let categoriaId: number | null =
+          null;
 
         if (nombreCategoria) {
-          const numeroCategoria = Number(nombreCategoria);
-          if (Number.isFinite(numeroCategoria) && numeroCategoria > 0) {
-            categoriaId = numeroCategoria;
-          } else {
-            const categoria = categorias.find((item) =>
-              normalizarCabecera(textoCategoria(item)) === normalizarCabecera(nombreCategoria)
+          const numeroCategoria =
+            Number(
+              nombreCategoria
             );
-            categoriaId = categoria?.id ?? null;
+
+          if (
+            Number.isFinite(
+              numeroCategoria
+            ) &&
+            numeroCategoria > 0
+          ) {
+            categoriaId =
+              numeroCategoria;
+          } else {
+            const categoria =
+              categorias.find(
+                (item) =>
+                  normalizarCabecera(
+                    textoCategoria(
+                      item
+                    )
+                  ) ===
+                  normalizarCabecera(
+                    nombreCategoria
+                  )
+              );
+
+            categoriaId =
+              categoria?.id ??
+              null;
           }
         }
 
-        const stock = Math.max(0, Math.trunc(numeroCSV(valorCSV(fila, ["Stock", "Stock inicial"]))));
-        const stockMinimo = Math.max(0, Math.trunc(numeroCSV(valorCSV(fila, ["Stock mínimo", "Stock minimo", "Mínimo", "Minimo"]))));
+        const stock = Math.max(
+          0,
+          Math.trunc(
+            numeroCSV(
+              valorCSV(fila, [
+                "Stock",
+                "Stock inicial",
+                "cantidad",
+                "Cantidad"
+              ])
+            )
+          )
+        );
 
-        return {
-          codigo: valorCSV(fila, ["Código", "Codigo"]) || null,
-          referencia: valorCSV(fila, ["Referencia", "Ref"]) || null,
-          nombre: valorCSV(fila, ["Nombre", "Nombre comercial", "Producto"]),
-          tipo_producto: tipo,
-          categoria_id: categoriaId,
-          marca: valorCSV(fila, ["Marca"]) || null,
-          modelo: valorCSV(fila, ["Modelo"]) || null,
-          color: valorCSV(fila, ["Color"]) || null,
-          material: valorCSV(fila, ["Material"]) || null,
-          indice_refraccion: valorCSV(fila, ["Índice", "Indice", "Índice de refracción", "Indice de refraccion"]) ? numeroCSV(valorCSV(fila, ["Índice", "Indice", "Índice de refracción", "Indice de refraccion"])) : null,
-          esfera_min: valorCSV(fila, ["Esfera mín", "Esfera min", "Esfera mínima", "Esfera minima"]) ? numeroCSV(valorCSV(fila, ["Esfera mín", "Esfera min", "Esfera mínima", "Esfera minima"])) : null,
-          esfera_max: valorCSV(fila, ["Esfera máx", "Esfera max", "Esfera máxima", "Esfera maxima"]) ? numeroCSV(valorCSV(fila, ["Esfera máx", "Esfera max", "Esfera máxima", "Esfera maxima"])) : null,
-          cilindro_min: valorCSV(fila, ["Cilindro mín", "Cilindro min", "Cilindro mínimo", "Cilindro minimo"]) ? numeroCSV(valorCSV(fila, ["Cilindro mín", "Cilindro min", "Cilindro mínimo", "Cilindro minimo"])) : null,
-          cilindro_max: valorCSV(fila, ["Cilindro máx", "Cilindro max", "Cilindro máximo", "Cilindro maximo"]) ? numeroCSV(valorCSV(fila, ["Cilindro máx", "Cilindro max", "Cilindro máximo", "Cilindro maximo"])) : null,
-          tratamiento: valorCSV(fila, ["Tratamiento"]) || null,
-          proveedor_marca: valorCSV(fila, ["Proveedor/Marca", "Proveedor", "Proveedor marca"]) || null,
-          ubicacion: valorCSV(fila, ["Ubicación", "Ubicacion"]) || null,
-          observaciones: valorCSV(fila, ["Observaciones", "Observacion"]) || null,
+        const stockMinimo =
+          Math.max(
+            0,
+            Math.trunc(
+              numeroCSV(
+                valorCSV(fila, [
+                  "Stock mínimo",
+                  "Stock minimo",
+                  "Mínimo",
+                  "Minimo"
+                ])
+              )
+            )
+          );
+
+        const precioVenta =
+          numeroCSV(
+            valorCSV(fila, [
+              "Precio venta",
+              "Precio de venta",
+              "precio venta + iva",
+              "Precio venta + IVA"
+            ])
+          );
+
+        const precioCompra =
+          numeroCSV(
+            valorCSV(fila, [
+              "Precio compra",
+              "Precio de compra",
+              "precio compra + iva",
+              "Precio compra + IVA"
+            ])
+          );
+
+        const aplicaDescuento =
+          valorCSV(fila, [
+            "aplica descuento",
+            "aplica descuento"
+          ]);
+
+        const porcentajeDescuento =
+          valorCSV(fila, [
+            "% descuento",
+            "porcentaje de descuento",
+            "porcentaje descuento"
+          ]);
+
+        const porcentajeComision =
+          valorCSV(fila, [
+            "% comision",
+            "% comisión",
+            "porcentaje comision",
+            "porcentaje comisión"
+          ]);
+
+        const aplicaComision =
+          valorCSV(fila, [
+            "aplica comision",
+            "aplica comisión"
+          ]);
+
+        const forma =
+          tipoOriginal &&
+          ![
+            "cristal",
+            "lente",
+            "lens",
+            "armazon",
+            "montura",
+            "frame",
+            "tratamiento",
+            "accesorio"
+          ].includes(
+            tipoNormalizado
+          )
+            ? tipoOriginal
+            : "";
+
+        const medidas = [
+          valorCSV(fila, [
+            "horizontal"
+          ])
+            ? `Horizontal: ${valorCSV(fila, ["horizontal"])}`
+            : "",
+          valorCSV(fila, [
+            "vertical"
+          ])
+            ? `Vertical: ${valorCSV(fila, ["vertical"])}`
+            : "",
+          valorCSV(fila, [
+            "puente"
+          ])
+            ? `Puente: ${valorCSV(fila, ["puente"])}`
+            : "",
+          valorCSV(fila, [
+            "Dmecanica",
+            "D mecánica",
+            "Dmecanica"
+          ])
+            ? `D mecánica: ${valorCSV(fila, ["Dmecanica", "D mecánica"])}`
+            : "",
+          valorCSV(fila, [
+            "Defectiva",
+            "Defectiva"
+          ])
+            ? `Defectiva: ${valorCSV(fila, ["Defectiva"])}`
+            : ""
+        ].filter(Boolean);
+
+        const adicionales = [
+          forma
+            ? `Tipo/formato de origen: ${forma}`
+            : "",
+          aplicaDescuento
+            ? `Aplica descuento: ${aplicaDescuento}`
+            : "",
+          porcentajeDescuento
+            ? `% descuento: ${porcentajeDescuento}`
+            : "",
+          aplicaComision
+            ? `Aplica comisión: ${aplicaComision}`
+            : "",
+          porcentajeComision
+            ? `% comisión: ${porcentajeComision}`
+            : "",
+          ...medidas
+        ].filter(Boolean);
+
+        const observacionOriginal =
+          valorCSV(fila, [
+            "Observaciones",
+            "Observacion",
+            "Observación"
+          ]);
+
+        const observaciones =
+          [
+            observacionOriginal,
+            adicionales.length > 0
+              ? `Datos adicionales importados: ${adicionales.join(" · ")}`
+              : ""
+          ]
+            .filter(Boolean)
+            .join(" | ") || null;
+
+        registros.push({
+          codigo:
+            codigo || null,
+
+          referencia:
+            referencia || null,
+
+          nombre,
+
+          tipo_producto:
+            tipo || "OTRO",
+
+          categoria_id:
+            categoriaId,
+
+          marca:
+            marca || null,
+
+          modelo:
+            valorCSV(fila, [
+              "Modelo"
+            ]) || null,
+
+          color:
+            valorCSV(fila, [
+              "Color",
+              "color"
+            ]) || null,
+
+          material:
+            valorCSV(fila, [
+              "Material",
+              "material"
+            ]) || null,
+
+          indice_refraccion:
+            valorCSV(fila, [
+              "Índice",
+              "Indice",
+              "Índice de refracción",
+              "Indice de refraccion"
+            ])
+              ? numeroCSV(
+                  valorCSV(fila, [
+                    "Índice",
+                    "Indice",
+                    "Índice de refracción",
+                    "Indice de refraccion"
+                  ])
+                )
+              : null,
+
+          esfera_min:
+            valorCSV(fila, [
+              "Esfera mín",
+              "Esfera min",
+              "Esfera mínima",
+              "Esfera minima"
+            ])
+              ? numeroCSV(
+                  valorCSV(fila, [
+                    "Esfera mín",
+                    "Esfera min",
+                    "Esfera mínima",
+                    "Esfera minima"
+                  ])
+                )
+              : null,
+
+          esfera_max:
+            valorCSV(fila, [
+              "Esfera máx",
+              "Esfera max",
+              "Esfera máxima",
+              "Esfera maxima"
+            ])
+              ? numeroCSV(
+                  valorCSV(fila, [
+                    "Esfera máx",
+                    "Esfera max",
+                    "Esfera máxima",
+                    "Esfera maxima"
+                  ])
+                )
+              : null,
+
+          cilindro_min:
+            valorCSV(fila, [
+              "Cilindro mín",
+              "Cilindro min",
+              "Cilindro mínimo",
+              "Cilindro minimo"
+            ])
+              ? numeroCSV(
+                  valorCSV(fila, [
+                    "Cilindro mín",
+                    "Cilindro min",
+                    "Cilindro mínimo",
+                    "Cilindro minimo"
+                  ])
+                )
+              : null,
+
+          cilindro_max:
+            valorCSV(fila, [
+              "Cilindro máx",
+              "Cilindro max",
+              "Cilindro máximo",
+              "Cilindro maximo"
+            ])
+              ? numeroCSV(
+                  valorCSV(fila, [
+                    "Cilindro máx",
+                    "Cilindro max",
+                    "Cilindro máximo",
+                    "Cilindro maximo"
+                  ])
+                )
+              : null,
+
+          tratamiento:
+            valorCSV(fila, [
+              "Tratamiento"
+            ]) || null,
+
+          proveedor_marca:
+            valorCSV(fila, [
+              "Proveedor/Marca",
+              "Proveedor",
+              "Proveedor marca",
+              "proveedor"
+            ]) || null,
+
+          ubicacion:
+            valorCSV(fila, [
+              "Ubicación",
+              "Ubicacion"
+            ]) || null,
+
+          observaciones,
+
           stock,
-          stock_minimo: stockMinimo,
-          precio_compra: Math.max(0, numeroCSV(valorCSV(fila, ["Precio compra", "Precio de compra"]))),
-          precio_venta: Math.max(0, numeroCSV(valorCSV(fila, ["Precio venta", "Precio de venta"]))),
-          activo: booleanoCSV(valorCSV(fila, ["Activo", "Estado"]) || "Sí")
-        };
-      });
 
-      const validos = registros.filter((registro) => registro.nombre.trim());
+          stock_minimo:
 
-      if (validos.length === 0) {
-        throw new Error("No se encontraron productos con nombre válido.");
+            stockMinimo,
+
+          precio_compra:
+            Math.max(
+              0,
+              precioCompra
+            ),
+
+          precio_venta:
+            Math.max(
+              0,
+              precioVenta
+            ),
+
+          activo:
+            booleanoCSV(
+              valorCSV(fila, [
+                "Activo",
+                "Estado"
+              ]) || "Sí"
+            )
+        });
+      }
+
+      if (registros.length === 0) {
+        throw new Error(
+          "No se encontraron productos válidos para importar."
+        );
       }
 
       let importados = 0;
       let errores = 0;
 
-      for (let inicio = 0; inicio < validos.length; inicio += 50) {
-        const bloque = validos.slice(inicio, inicio + 50);
+      for (
+        let inicio = 0;
+        inicio < registros.length;
+        inicio += 50
+      ) {
+        const bloque =
+          registros.slice(
+            inicio,
+            inicio + 50
+          );
 
-        const { data, error } = await supabase
-          .from("productos")
-          .insert(bloque)
-          .select("id, stock");
+        const { data, error } =
+          await supabase
+            .from("productos")
+            .insert(bloque)
+            .select("id, stock");
 
         if (error) {
-          for (const registro of bloque) {
-            const resultadoIndividual = await supabase
-              .from("productos")
-              .insert([registro])
-              .select("id, stock")
-              .single();
+          for (
+            const registro of bloque
+          ) {
+            const resultadoIndividual =
+              await supabase
+                .from("productos")
+                .insert([
+                  registro
+                ])
+                .select("id, stock")
+                .single();
 
-            if (resultadoIndividual.error || !resultadoIndividual.data) {
+            if (
+              resultadoIndividual.error ||
+              !resultadoIndividual.data
+            ) {
               errores += 1;
-              console.warn("No se pudo importar producto:", resultadoIndividual.error?.message);
+
+              console.warn(
+                "No se pudo importar producto:",
+                resultadoIndividual.error?.message
+              );
+
               continue;
             }
 
             importados += 1;
 
-            if (registro.stock > 0) {
-              await supabase.from("inventario_movimientos").insert([{
-                producto_id: resultadoIndividual.data.id,
-                tipo_movimiento: "ENTRADA",
-                cantidad: registro.stock,
-                observacion: "Stock inicial por importación CSV",
-                fecha: new Date().toISOString()
-              }]);
+            if (
+              registro.stock > 0
+            ) {
+              await supabase
+                .from(
+                  "inventario_movimientos"
+                )
+                .insert([
+                  {
+                    producto_id:
+                      resultadoIndividual
+                        .data.id,
+
+                    tipo_movimiento:
+                      "ENTRADA",
+
+                    cantidad:
+                      registro.stock,
+
+                    observacion:
+                      "Stock inicial por importación Excel",
+
+                    fecha:
+                      new Date().toISOString()
+                  }
+                ]);
             }
           }
         } else {
-          importados += bloque.length;
+          importados +=
+            bloque.length;
 
-          const movimientos = (data || [])
-            .filter((item) => Number(item.stock || 0) > 0)
-            .map((item) => ({
-              producto_id: item.id,
-              tipo_movimiento: "ENTRADA",
-              cantidad: Number(item.stock || 0),
-              observacion: "Stock inicial por importación CSV",
-              fecha: new Date().toISOString()
-            }));
+          const movimientos =
+            (data || [])
+              .filter(
+                (item) =>
+                  Number(
+                    item.stock || 0
+                  ) > 0
+              )
+              .map(
+                (item) => ({
+                  producto_id:
+                    item.id,
 
-          if (movimientos.length > 0) {
-            const movimientoResult = await supabase
-              .from("inventario_movimientos")
-              .insert(movimientos);
+                  tipo_movimiento:
+                    "ENTRADA",
 
-            if (movimientoResult.error) {
-              console.warn("No se pudieron registrar algunos movimientos iniciales:", movimientoResult.error.message);
+                  cantidad:
+                    Number(
+                      item.stock || 0
+                    ),
+
+                  observacion:
+                    "Stock inicial por importación Excel",
+
+                  fecha:
+                    new Date().toISOString()
+                })
+              );
+
+          if (
+            movimientos.length > 0
+          ) {
+            const movimientoResult =
+              await supabase
+                .from(
+                  "inventario_movimientos"
+                )
+                .insert(
+                  movimientos
+                );
+
+            if (
+              movimientoResult.error
+            ) {
+              console.warn(
+                "No se pudieron registrar algunos movimientos iniciales:",
+                movimientoResult
+                  .error
+                  .message
+              );
             }
           }
         }
@@ -918,18 +1688,176 @@ function Productos() {
 
       setMensaje(
         `✓ Importación terminada. ${importados} producto(s) importado(s).` +
-        (errores > 0 ? ` ${errores} producto(s) no pudieron importarse.` : "")
+          (
+            erroresFila.length +
+              errores >
+            0
+              ? ` ${erroresFila.length + errores} fila(s) presentaron problemas.`
+              : ""
+          )
       );
+
+      if (
+        erroresFila.length > 0
+      ) {
+        console.warn(
+          "Detalles de importación:",
+          erroresFila
+        );
+      }
     } catch (error: any) {
       console.error(error);
-      setError(error?.message || "No fue posible importar el archivo.");
+
+      setError(
+        error?.message ||
+          "No fue posible importar el archivo."
+      );
     } finally {
       setImportando(false);
-      if (inputImportarRef.current) {
-        inputImportarRef.current.value = "";
+
+      if (
+        inputImportarRef.current
+      ) {
+        inputImportarRef.current.value =
+          "";
       }
     }
   }
+
+  function imprimirPDF() {
+    if (
+      productosFiltrados.length === 0
+    ) {
+      alert(
+        "No hay productos para imprimir."
+      );
+      return;
+    }
+
+    const filas =
+      productosFiltrados
+        .map(
+          (producto) => `
+            <tr>
+              <td>${escaparHTML(producto.codigo || "")}</td>
+              <td>${escaparHTML(producto.nombre || "")}</td>
+              <td>${escaparHTML(etiquetaTipo(producto.tipo_producto))}</td>
+              <td>${escaparHTML(producto.marca || "")}</td>
+              <td>${escaparHTML(producto.modelo || "")}</td>
+              <td>${escaparHTML(producto.color || "")}</td>
+              <td>${escaparHTML(String(numero(producto.stock)))}</td>
+              <td>${escaparHTML(moneda(producto.precio_venta))}</td>
+            </tr>
+          `
+        )
+        .join("");
+
+    const ventana =
+      window.open(
+        "",
+        "_blank",
+        "width=1200,height=800"
+      );
+
+    if (!ventana) {
+      alert(
+        "El navegador bloqueó la ventana de impresión. Permite ventanas emergentes para este sitio."
+      );
+      return;
+    }
+
+    ventana.document.write(`
+      <!doctype html>
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <title>Inventario - Ahorro Visión</title>
+          <style>
+            @page {
+              size: A4 landscape;
+              margin: 10mm;
+            }
+
+            body {
+              font-family: Arial, sans-serif;
+              color: #222;
+              margin: 0;
+              padding: 0;
+            }
+
+            h1 {
+              color: #cc001f;
+              margin: 0 0 4px;
+            }
+
+            .subtitulo {
+              color: #666;
+              margin-bottom: 18px;
+              font-size: 13px;
+            }
+
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              font-size: 9px;
+            }
+
+            th {
+              background: #f1f1f1;
+              text-align: left;
+              padding: 6px;
+              border: 1px solid #ccc;
+            }
+
+            td {
+              padding: 5px;
+              border: 1px solid #ddd;
+            }
+          </style>
+        </head>
+
+        <body>
+          <h1>Ahorro Visión ERP</h1>
+
+          <div class="subtitulo">
+            Inventario · ${new Date().toLocaleDateString("es-CL")}
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th>Código</th>
+                <th>Nombre</th>
+                <th>Tipo</th>
+                <th>Marca</th>
+                <th>Modelo</th>
+                <th>Color</th>
+                <th>Stock</th>
+                <th>Precio venta</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              ${filas}
+            </tbody>
+          </table>
+
+          <script>
+            window.onload = function() {
+              window.print();
+            };
+
+            window.onafterprint = function() {
+              window.close();
+            };
+          </script>
+        </body>
+      </html>
+    `);
+
+    ventana.document.close();
+  }
+
 
   const tipoSeleccionado = formulario.tipo_producto;
   const mostrarDatosCristal = tipoSeleccionado === "CRISTAL";
@@ -1035,22 +1963,46 @@ function Productos() {
               onClick={() => inputImportarRef.current?.click()}
               disabled={importando}
             >
-              {importando ? "Importando..." : "↑ Importar CSV"}
+              {importando ? "Importando..." : "↑ Importar Excel"}
             </button>
 
-            <button type="button" style={botonSecundarioStyle()} onClick={exportarCSV}>
+            <button
+              type="button"
+              style={botonSecundarioStyle()}
+              onClick={exportarCSV}
+            >
               ↓ Exportar CSV
             </button>
 
-            <button type="button" style={botonSecundarioStyle()} onClick={descargarPlantillaCSV}>
-              ↓ Plantilla
+            <button
+              type="button"
+              style={botonSecundarioStyle()}
+              onClick={exportarExcel}
+            >
+              ↓ Exportar Excel
+            </button>
+
+            <button
+              type="button"
+              style={botonSecundarioStyle()}
+              onClick={descargarPlantillaExcel}
+            >
+              ↓ Plantilla Excel
+            </button>
+
+            <button
+              type="button"
+              style={botonSecundarioStyle()}
+              onClick={imprimirPDF}
+            >
+              🖨️ Imprimir / PDF
             </button>
 
             <input
               ref={inputImportarRef}
               type="file"
-              accept=".csv,.txt"
-              onChange={importarCSV}
+              accept=".xlsx,.xls,.csv,.txt"
+              onChange={importarArchivo}
               style={{ display: "none" }}
             />
             <button
