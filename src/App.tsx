@@ -52,6 +52,11 @@ function App() {
           element={<Ventas />}
         />
 
+        <Route
+          path="/caja"
+          element={<Caja />}
+        />
+        
         <Route path="/inventario"
           element={<Productos />} 
           />
