@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent, type CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent, type CSSProperties } from "react";
 import MainLayout from "../layout/MainLayout";
 import PageHeader from "../components/PageHeader";
 import { supabase } from "../lib/supabase";
@@ -148,6 +148,97 @@ function labelStyle(): CSSProperties {
   };
 }
 
+function normalizarCabecera(valor: string): string {
+  return valor
+    .replace(/^\uFEFF/, "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim()
+    .replace(/[\s_-]+/g, "");
+}
+
+function separarCSV(linea: string, separador: string): string[] {
+  const resultado: string[] = [];
+  let actual = "";
+  let dentroComillas = false;
+
+  for (let i = 0; i < linea.length; i += 1) {
+    const caracter = linea[i];
+
+    if (caracter === '"') {
+      if (dentroComillas && linea[i + 1] === '"') {
+        actual += '"';
+        i += 1;
+      } else {
+        dentroComillas = !dentroComillas;
+      }
+      continue;
+    }
+
+    if (caracter === separador && !dentroComillas) {
+      resultado.push(actual.trim());
+      actual = "";
+      continue;
+    }
+
+    actual += caracter;
+  }
+
+  resultado.push(actual.trim());
+  return resultado;
+}
+
+function parsearCSV(texto: string): Record<string, string>[] {
+  const lineas = texto
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .split("\n")
+    .filter((linea) => linea.trim() !== "");
+
+  if (lineas.length < 2) return [];
+
+  const separador = lineas[0].includes(";") ? ";" : ",";
+  const cabeceras = separarCSV(lineas[0], separador).map(normalizarCabecera);
+
+  return lineas.slice(1).map((linea) => {
+    const valores = separarCSV(linea, separador);
+    const fila: Record<string, string> = {};
+
+    cabeceras.forEach((cabecera, indice) => {
+      fila[cabecera] = valores[indice] || "";
+    });
+
+    return fila;
+  });
+}
+
+function valorCSV(fila: Record<string, string>, nombres: string[]): string {
+  for (const nombre of nombres) {
+    const clave = normalizarCabecera(nombre);
+    if (Object.prototype.hasOwnProperty.call(fila, clave)) {
+      return fila[clave].trim();
+    }
+  }
+  return "";
+}
+
+function numeroCSV(valor: string): number {
+  if (!valor.trim()) return 0;
+
+  const limpio = valor
+    .replace(/\./g, "")
+    .replace(",", ".");
+
+  const resultado = Number(limpio);
+  return Number.isFinite(resultado) ? resultado : 0;
+}
+
+function booleanoCSV(valor: string): boolean {
+  const normalizado = normalizarCabecera(valor);
+  return !["no", "false", "0", "inactivo", "inactiva"].includes(normalizado);
+}
+
 function botonSecundarioStyle(): CSSProperties {
   return {
     border: "1px solid #ddd",
@@ -168,6 +259,8 @@ function Productos() {
   const [filtroEstado, setFiltroEstado] = useState("TODOS");
   const [cargando, setCargando] = useState(true);
   const [guardando, setGuardando] = useState(false);
+  const [importando, setImportando] = useState(false);
+  const inputImportarRef = useRef<HTMLInputElement>(null);
   const [mensaje, setMensaje] = useState("");
   const [error, setError] = useState("");
   const [productoEditando, setProductoEditando] = useState<Producto | null>(null);
@@ -602,6 +695,242 @@ function Productos() {
     URL.revokeObjectURL(url);
   }
 
+
+  function descargarPlantillaCSV() {
+    const encabezados = [
+      "Código",
+      "Referencia",
+      "Nombre",
+      "Tipo",
+      "Categoría",
+      "Marca",
+      "Modelo",
+      "Color",
+      "Material",
+      "Índice",
+      "Esfera mín",
+      "Esfera máx",
+      "Cilindro mín",
+      "Cilindro máx",
+      "Tratamiento",
+      "Stock",
+      "Stock mínimo",
+      "Precio compra",
+      "Precio venta",
+      "Proveedor/Marca",
+      "Ubicación",
+      "Activo",
+      "Observaciones"
+    ];
+
+    const ejemplo = [
+      "RB5228-001",
+      "RX5228",
+      "Armazón Ray-Ban RX5228",
+      "ARMAZON",
+      "",
+      "Ray-Ban",
+      "RX5228",
+      "Negro",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "",
+      "5",
+      "1",
+      "50000",
+      "69990",
+      "Proveedor",
+      "Vitrina 1",
+      "Sí",
+      "Producto importado"
+    ];
+
+    const escapar = (valor: unknown) =>
+      `"${String(valor ?? "").replace(/"/g, '""')}"`;
+
+    const csv = [encabezados, ejemplo]
+      .map((fila) => fila.map(escapar).join(";"))
+      .join("\r\n");
+
+    const blob = new Blob(["\uFEFF" + csv], {
+      type: "text/csv;charset=utf-8;"
+    });
+
+    const url = URL.createObjectURL(blob);
+    const enlace = document.createElement("a");
+
+    enlace.href = url;
+    enlace.download =
+      "plantilla-importacion-inventario-ahorro-vision.csv";
+
+    document.body.appendChild(enlace);
+    enlace.click();
+    enlace.remove();
+
+    URL.revokeObjectURL(url);
+  }
+
+
+  async function importarCSV(evento: ChangeEvent<HTMLInputElement>) {
+    const archivo = evento.target.files?.[0];
+    if (!archivo) return;
+
+    setImportando(true);
+    setMensaje("");
+    setError("");
+
+    try {
+      const texto = await archivo.text();
+      const filas = parsearCSV(texto);
+
+      if (filas.length === 0) {
+        throw new Error("El archivo no contiene filas válidas.");
+      }
+
+      const registros = filas.map((fila) => {
+        const tipoOriginal = valorCSV(fila, ["Tipo", "Tipo producto", "TipoProducto"]);
+        const tipoNormalizado = normalizarCabecera(tipoOriginal);
+
+        let tipo = "OTRO";
+        if (["armazon", "frame", "montura"].includes(tipoNormalizado)) tipo = "ARMAZON";
+        if (["cristal", "lente", "lens"].includes(tipoNormalizado)) tipo = "CRISTAL";
+        if (["tratamiento"].includes(tipoNormalizado)) tipo = "TRATAMIENTO";
+        if (["accesorio"].includes(tipoNormalizado)) tipo = "ACCESORIO";
+
+        const nombreCategoria = valorCSV(fila, ["Categoría", "Categoria", "Nombre categoría", "Nombre categoria"]);
+        let categoriaId: number | null = null;
+
+        if (nombreCategoria) {
+          const numeroCategoria = Number(nombreCategoria);
+          if (Number.isFinite(numeroCategoria) && numeroCategoria > 0) {
+            categoriaId = numeroCategoria;
+          } else {
+            const categoria = categorias.find((item) =>
+              normalizarCabecera(textoCategoria(item)) === normalizarCabecera(nombreCategoria)
+            );
+            categoriaId = categoria?.id ?? null;
+          }
+        }
+
+        const stock = Math.max(0, Math.trunc(numeroCSV(valorCSV(fila, ["Stock", "Stock inicial"]))));
+        const stockMinimo = Math.max(0, Math.trunc(numeroCSV(valorCSV(fila, ["Stock mínimo", "Stock minimo", "Mínimo", "Minimo"]))));
+
+        return {
+          codigo: valorCSV(fila, ["Código", "Codigo"]) || null,
+          referencia: valorCSV(fila, ["Referencia", "Ref"]) || null,
+          nombre: valorCSV(fila, ["Nombre", "Nombre comercial", "Producto"]),
+          tipo_producto: tipo,
+          categoria_id: categoriaId,
+          marca: valorCSV(fila, ["Marca"]) || null,
+          modelo: valorCSV(fila, ["Modelo"]) || null,
+          color: valorCSV(fila, ["Color"]) || null,
+          material: valorCSV(fila, ["Material"]) || null,
+          indice_refraccion: valorCSV(fila, ["Índice", "Indice", "Índice de refracción", "Indice de refraccion"]) ? numeroCSV(valorCSV(fila, ["Índice", "Indice", "Índice de refracción", "Indice de refraccion"])) : null,
+          esfera_min: valorCSV(fila, ["Esfera mín", "Esfera min", "Esfera mínima", "Esfera minima"]) ? numeroCSV(valorCSV(fila, ["Esfera mín", "Esfera min", "Esfera mínima", "Esfera minima"])) : null,
+          esfera_max: valorCSV(fila, ["Esfera máx", "Esfera max", "Esfera máxima", "Esfera maxima"]) ? numeroCSV(valorCSV(fila, ["Esfera máx", "Esfera max", "Esfera máxima", "Esfera maxima"])) : null,
+          cilindro_min: valorCSV(fila, ["Cilindro mín", "Cilindro min", "Cilindro mínimo", "Cilindro minimo"]) ? numeroCSV(valorCSV(fila, ["Cilindro mín", "Cilindro min", "Cilindro mínimo", "Cilindro minimo"])) : null,
+          cilindro_max: valorCSV(fila, ["Cilindro máx", "Cilindro max", "Cilindro máximo", "Cilindro maximo"]) ? numeroCSV(valorCSV(fila, ["Cilindro máx", "Cilindro max", "Cilindro máximo", "Cilindro maximo"])) : null,
+          tratamiento: valorCSV(fila, ["Tratamiento"]) || null,
+          proveedor_marca: valorCSV(fila, ["Proveedor/Marca", "Proveedor", "Proveedor marca"]) || null,
+          ubicacion: valorCSV(fila, ["Ubicación", "Ubicacion"]) || null,
+          observaciones: valorCSV(fila, ["Observaciones", "Observacion"]) || null,
+          stock,
+          stock_minimo: stockMinimo,
+          precio_compra: Math.max(0, numeroCSV(valorCSV(fila, ["Precio compra", "Precio de compra"]))),
+          precio_venta: Math.max(0, numeroCSV(valorCSV(fila, ["Precio venta", "Precio de venta"]))),
+          activo: booleanoCSV(valorCSV(fila, ["Activo", "Estado"]) || "Sí")
+        };
+      });
+
+      const validos = registros.filter((registro) => registro.nombre.trim());
+
+      if (validos.length === 0) {
+        throw new Error("No se encontraron productos con nombre válido.");
+      }
+
+      let importados = 0;
+      let errores = 0;
+
+      for (let inicio = 0; inicio < validos.length; inicio += 50) {
+        const bloque = validos.slice(inicio, inicio + 50);
+
+        const { data, error } = await supabase
+          .from("productos")
+          .insert(bloque)
+          .select("id, stock");
+
+        if (error) {
+          for (const registro of bloque) {
+            const resultadoIndividual = await supabase
+              .from("productos")
+              .insert([registro])
+              .select("id, stock")
+              .single();
+
+            if (resultadoIndividual.error || !resultadoIndividual.data) {
+              errores += 1;
+              console.warn("No se pudo importar producto:", resultadoIndividual.error?.message);
+              continue;
+            }
+
+            importados += 1;
+
+            if (registro.stock > 0) {
+              await supabase.from("inventario_movimientos").insert([{
+                producto_id: resultadoIndividual.data.id,
+                tipo_movimiento: "ENTRADA",
+                cantidad: registro.stock,
+                observacion: "Stock inicial por importación CSV",
+                fecha: new Date().toISOString()
+              }]);
+            }
+          }
+        } else {
+          importados += bloque.length;
+
+          const movimientos = (data || [])
+            .filter((item) => Number(item.stock || 0) > 0)
+            .map((item) => ({
+              producto_id: item.id,
+              tipo_movimiento: "ENTRADA",
+              cantidad: Number(item.stock || 0),
+              observacion: "Stock inicial por importación CSV",
+              fecha: new Date().toISOString()
+            }));
+
+          if (movimientos.length > 0) {
+            const movimientoResult = await supabase
+              .from("inventario_movimientos")
+              .insert(movimientos);
+
+            if (movimientoResult.error) {
+              console.warn("No se pudieron registrar algunos movimientos iniciales:", movimientoResult.error.message);
+            }
+          }
+        }
+      }
+
+      await cargarDatos();
+
+      setMensaje(
+        `✓ Importación terminada. ${importados} producto(s) importado(s).` +
+        (errores > 0 ? ` ${errores} producto(s) no pudieron importarse.` : "")
+      );
+    } catch (error: any) {
+      console.error(error);
+      setError(error?.message || "No fue posible importar el archivo.");
+    } finally {
+      setImportando(false);
+      if (inputImportarRef.current) {
+        inputImportarRef.current.value = "";
+      }
+    }
+  }
+
   const tipoSeleccionado = formulario.tipo_producto;
   const mostrarDatosCristal = tipoSeleccionado === "CRISTAL";
 
@@ -700,9 +1029,30 @@ function Productos() {
           </div>
 
           <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+            <button
+              type="button"
+              style={botonSecundarioStyle()}
+              onClick={() => inputImportarRef.current?.click()}
+              disabled={importando}
+            >
+              {importando ? "Importando..." : "↑ Importar CSV"}
+            </button>
+
             <button type="button" style={botonSecundarioStyle()} onClick={exportarCSV}>
               ↓ Exportar CSV
             </button>
+
+            <button type="button" style={botonSecundarioStyle()} onClick={descargarPlantillaCSV}>
+              ↓ Plantilla
+            </button>
+
+            <input
+              ref={inputImportarRef}
+              type="file"
+              accept=".csv,.txt"
+              onChange={importarCSV}
+              style={{ display: "none" }}
+            />
             <button
               type="button"
               onClick={abrirNuevo}
