@@ -33,25 +33,29 @@ function Sidebar() {
 
           <li>
             <Link to="/">
-              Dashboard
+              <span className="menu-icon">🏠</span>
+              <span>Dashboard</span>
             </Link>
           </li>
 
           <li>
             <Link to="/pacientes">
-              Pacientes
+              <span className="menu-icon">👤</span>
+              <span>Pacientes</span>
             </Link>
           </li>
 
           <li>
             <Link to="/agenda">
-              Agenda
+              <span className="menu-icon">📅</span>
+              <span>Agenda</span>
             </Link>
           </li>
 
           <li>
             <Link to="/historia-clinica">
-              Historia Clínica
+              <span className="menu-icon">📋</span>
+              <span>Historia Clínica</span>
             </Link>
           </li>
 
@@ -69,31 +73,36 @@ function Sidebar() {
 
           <li>
             <Link to="/recetas">
-              Recetas
+              <span className="menu-icon">👓</span>
+              <span>Recetas</span>
             </Link>
           </li>
 
           <li>
             <Link to="/ordenes">
-              Órdenes
+              <span className="menu-icon">📝</span>
+              <span>Órdenes</span>
             </Link>
           </li>
 
           <li>
             <Link to="/inventario">
-              📦 Inventario
+              <span className="menu-icon">📦</span>
+              <span>Inventario</span>
             </Link>
           </li>
 
           <li>
             <Link to="/ventas">
-              Ventas
+              <span className="menu-icon">🛒</span>
+              <span>Ventas</span>
             </Link>
           </li>
 
           <li>
             <Link to="/caja">
-              💰 Caja
+              <span className="menu-icon">💰</span>
+              <span>Caja</span>
             </Link>
           </li>
 
@@ -102,7 +111,7 @@ function Sidebar() {
       </div>
 
 
-      {/* CONFIGURACIÓN */}
+      {/* ADMINISTRACIÓN */}
       <div className="grupo">
 
         <h4>ADMINISTRACIÓN</h4>
@@ -111,7 +120,18 @@ function Sidebar() {
 
           <li>
             <Link to="/configuracion-optica">
-              ⚙️ Configuración de la Óptica
+              <span className="menu-icon">⚙️</span>
+
+              <span className="menu-configuracion">
+                <span className="menu-configuracion-principal">
+                  Configuración
+                </span>
+
+                <span className="menu-configuracion-secundario">
+                  de la Óptica
+                </span>
+              </span>
+
             </Link>
           </li>
 
