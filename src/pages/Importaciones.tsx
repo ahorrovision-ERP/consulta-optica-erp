@@ -44,8 +44,10 @@ interface Preview {
   filasValidas: number;
   filasError: number;
   documentosUnicos: number;
+  personasUnicas: number;
   filasRepetidas: number;
   conflictosNombre: number;
+  conflictosDetalle: Array<{ documento: string; personas: string[] }>;
   filasConAdicion: number;
   filasConAgudeza: number;
   filasRXCompleta: number;
@@ -113,6 +115,20 @@ function normalizarDocumento(valor: string): string {
   return valor
     .toUpperCase()
     .replace(/[^0-9K]/g, "");
+}
+
+function normalizarTextoIdentidad(valor: string): string {
+  return valor
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase()
+    .replace(/[^A-Z0-9ÑÜ]+/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+function claveIdentidad(fila: FilaImportacion): string {
+  return `${normalizarTextoIdentidad(fila.nombres)}|${normalizarTextoIdentidad(fila.apellidos)}`;
 }
 
 function analizarRX(valor: string): "completa" | "simple" | "vacia" | "error" {
@@ -292,63 +308,136 @@ function Importaciones() {
       setArchivo(file);
       setFilasImportacion(filas);
 
-      const porDocumento = new Map<string, Set<string>>();
+      const porDocumento = new Map<string, Map<string, string>>();
+
       filas.forEach((fila) => {
         const documento = normalizarDocumento(fila.documento);
         if (!documento) return;
 
-        const identidad = `${fila.nombres.trim()}|${fila.apellidos.trim()}`.toLowerCase();
+        const identidad = claveIdentidad(fila);
+        const nombreCompleto = [fila.nombres, fila.apellidos]
+          .filter(Boolean)
+          .join(" ")
+          .trim();
+
         if (!porDocumento.has(documento)) {
-          porDocumento.set(documento, new Set());
+          porDocumento.set(documento, new Map());
         }
-        porDocumento.get(documento)?.add(identidad);
+
+        porDocumento.get(documento)?.set(identidad, nombreCompleto);
       });
 
       const documentos = Array.from(porDocumento.keys());
-      const documentosRepetidos = filas.length - documentos.length;
-      const conflictosNombre = Array.from(porDocumento.values()).filter(
-        (set) => set.size > 1
-      ).length;
+      const personasUnicas = Array.from(porDocumento.values()).reduce(
+        (total, personas) => total + personas.size,
+        0
+      );
 
-      let pacientesExistentes = 0;
-      let recetasExistentes = 0;
+      // "Filas repetidas" significa filas cuyo documento aparece más de una vez,
+      // aunque correspondan a personas distintas del mismo titular.
+      const filasDocumentoRepetido = filas.length - documentos.length;
 
-      const documentosSet = new Set(documentos);
-
-      if (documentosSet.size > 0) {
-        const { data: pacientesData } = await supabase
-          .from("pacientes")
-          .select("id, rut");
-
-        const docsDb = new Set(
-          (pacientesData || [])
-            .map((paciente) => normalizarDocumento(String(paciente.rut || "")))
-            .filter(Boolean)
-        );
-
-        pacientesExistentes = documentos.filter((doc) => docsDb.has(doc)).length;
-      }
-
-      const formulas = filas
-        .map((fila) => fila.numero_formula)
-        .filter(Boolean);
-
-      if (formulas.length > 0) {
-        const formulasSet = new Set(formulas);
-        const { data: recetasData } = await supabase
-          .from("recetas")
-          .select("numero_formula");
-
-        recetasExistentes = (recetasData || []).filter(
-          (receta) => receta.numero_formula && formulasSet.has(String(receta.numero_formula))
-        ).length;
-      }
+      const conflictos = Array.from(porDocumento.entries())
+        .filter(([, personas]) => personas.size > 1)
+        .map(([documento, personas]) => ({
+          documento,
+          personas: Array.from(personas.values())
+        }))
+        .sort((a, b) => a.documento.localeCompare(b.documento));
 
       const filasValidas = filas.filter(
         (fila) =>
           normalizarDocumento(fila.documento) &&
           fila.nombres.trim()
       );
+
+      let pacientesExistentes = 0;
+      let recetasExistentes = 0;
+
+      // Buscamos por RUT del paciente o RUT titular + identidad de la persona.
+      // Así dos personas distintas con el mismo RUT titular no se fusionan.
+      const { data: pacientesData, error: pacientesError } = await supabase
+        .from("pacientes")
+        .select("id, rut, rut_titular, nombres, apellidos");
+
+      if (pacientesError) {
+        throw new Error(
+          `No se pudo consultar pacientes para validar la importación: ${pacientesError.message}`
+        );
+      }
+
+      const pacientesPorClave = new Map<string, number>();
+      (pacientesData || []).forEach((paciente) => {
+        const nombres = String(paciente.nombres || "");
+        const apellidos = String(paciente.apellidos || "");
+        const identidad = `${normalizarTextoIdentidad(nombres)}|${normalizarTextoIdentidad(apellidos)}`;
+
+        const ruts = [paciente.rut, paciente.rut_titular]
+          .map((rut) => normalizarDocumento(String(rut || "")))
+          .filter(Boolean);
+
+        ruts.forEach((rut) => {
+          pacientesPorClave.set(`${rut}|${identidad}`, Number(paciente.id));
+        });
+      });
+
+      const clavesFuente = new Map<string, string>();
+      filas.forEach((fila) => {
+        const documento = normalizarDocumento(fila.documento);
+        if (!documento || !fila.nombres.trim()) return;
+        const clave = `${documento}|${claveIdentidad(fila)}`;
+        clavesFuente.set(clave, documento);
+      });
+
+      pacientesExistentes = Array.from(clavesFuente.keys()).filter((clave) =>
+        pacientesPorClave.has(clave)
+      ).length;
+
+      // Recetas existentes: solo cuentan si el número de fórmula ya existe
+      // para la misma persona, no simplemente para cualquier paciente.
+      const { data: recetasData, error: recetasError } = await supabase
+        .from("recetas")
+        .select("numero_formula, paciente_id");
+
+      if (recetasError) {
+        throw new Error(
+          `No se pudo consultar recetas para validar la importación: ${recetasError.message}`
+        );
+      }
+
+      const recetasExistentesSet = new Set<string>();
+      (recetasData || []).forEach((receta) => {
+        const numeroFormula = String(receta.numero_formula || "").trim();
+        if (!numeroFormula) return;
+
+        const pacienteId = Number(receta.paciente_id);
+        const paciente = (pacientesData || []).find(
+          (item) => Number(item.id) === pacienteId
+        );
+
+        if (!paciente) return;
+
+        const identidad = `${normalizarTextoIdentidad(String(paciente.nombres || ""))}|${normalizarTextoIdentidad(String(paciente.apellidos || ""))}`;
+        const ruts = [paciente.rut, paciente.rut_titular]
+          .map((rut) => normalizarDocumento(String(rut || "")))
+          .filter(Boolean);
+
+        ruts.forEach((rut) => {
+          recetasExistentesSet.add(
+            `${rut}|${identidad}|${numeroFormula}`
+          );
+        });
+      });
+
+      recetasExistentes = filas.filter((fila) => {
+        const documento = normalizarDocumento(fila.documento);
+        const numeroFormula = fila.numero_formula.trim();
+        if (!documento || !numeroFormula || !fila.nombres.trim()) return false;
+
+        return recetasExistentesSet.has(
+          `${documento}|${claveIdentidad(fila)}|${numeroFormula}`
+        );
+      }).length;
 
       let filasRXCompleta = 0;
       let filasRXSimple = 0;
@@ -370,10 +459,7 @@ function Importaciones() {
           filasConAdicion += 1;
         }
 
-        if (
-          fila.agudeza_visual_od ||
-          fila.agudeza_visual_oi
-        ) {
+        if (fila.agudeza_visual_od || fila.agudeza_visual_oi) {
           filasConAgudeza += 1;
         }
       });
@@ -383,14 +469,16 @@ function Importaciones() {
         filasValidas: filasValidas.length,
         filasError: filas.length - filasValidas.length,
         documentosUnicos: documentos.length,
-        filasRepetidas: documentosRepetidos,
-        conflictosNombre,
+        personasUnicas,
+        filasRepetidas: filasDocumentoRepetido,
+        conflictosNombre: conflictos.length,
+        conflictosDetalle: conflictos,
         filasConAdicion,
         filasConAgudeza,
         filasRXCompleta,
         filasRXSimple,
         filasRXNoReconocida,
-        pacientesNuevos: documentos.length - pacientesExistentes,
+        pacientesNuevos: Math.max(0, personasUnicas - pacientesExistentes),
         pacientesExistentes,
         recetasExistentes
       });
@@ -419,17 +507,12 @@ function Importaciones() {
       return;
     }
 
-    if (preview.conflictosNombre > 0) {
-      const continuar = window.confirm(
-        `Se detectaron ${preview.conflictosNombre} documento(s) que aparecen con nombres diferentes en el archivo.\n\nEl sistema mantendrá un solo paciente por documento y no modificará pacientes existentes. Las recetas se importarán asociadas al documento.\n\n¿Quieres continuar?`
-      );
+    const mensajeConfirmacion =
+      `Se crearán/relacionarán ${preview.personasUnicas.toLocaleString("es-CL")} persona(s) a partir de ${preview.documentosUnicos.toLocaleString("es-CL")} RUT/documentos titulares y se procesarán ${preview.filasValidas.toLocaleString("es-CL")} receta(s).\n\n` +
+      `Cuando un mismo RUT tenga más de una persona, cada persona quedará en una ficha independiente y ambas quedarán vinculadas al mismo RUT titular. No se fusionarán por RUT.\n\n` +
+      `Los registros ya existentes para la misma persona + número de fórmula se omitirán.\n\n¿Continuar?`;
 
-      if (!continuar) return;
-    }
-
-    const continuar = window.confirm(
-      `Se importarán aproximadamente ${preview.pacientesNuevos.toLocaleString("es-CL")} paciente(s) nuevo(s) y ${preview.filasValidas.toLocaleString("es-CL")} fila(s) histórica(s) de receta.\n\nLa operación quedará registrada como un lote y podrá deshacerse posteriormente.\n\n¿Continuar?`
-    );
+    const continuar = window.confirm(mensajeConfirmacion);
 
     if (!continuar) return;
 
@@ -753,11 +836,12 @@ function Importaciones() {
                 ["Filas", preview.totalFilas],
                 ["Filas válidas", preview.filasValidas],
                 ["Documentos únicos", preview.documentosUnicos],
-                ["Filas repetidas", preview.filasRepetidas],
+                ["Personas identificadas", preview.personasUnicas],
+                ["Filas con documento repetido", preview.filasRepetidas],
                 ["Pacientes nuevos", preview.pacientesNuevos],
                 ["Pacientes existentes", preview.pacientesExistentes],
                 ["Recetas existentes", preview.recetasExistentes],
-                ["Conflictos de nombre", preview.conflictosNombre]
+                ["Documentos con varias personas", preview.conflictosNombre]
               ].map(([titulo, valor]) => (
                 <div
                   key={String(titulo)}
@@ -766,7 +850,7 @@ function Importaciones() {
                     borderRadius: "14px",
                     padding: "16px",
                     background:
-                      titulo === "Conflictos de nombre" && Number(valor) > 0
+                      titulo === "Documentos con varias personas" && Number(valor) > 0
                         ? "#fff8e8"
                         : "#fafafa"
                   }}
@@ -793,6 +877,41 @@ function Importaciones() {
               ))}
             </div>
 
+            {preview.conflictosDetalle.length > 0 && (
+              <div
+                style={{
+                  marginTop: "18px",
+                  padding: "18px",
+                  borderRadius: "13px",
+                  background: "#fff8e8",
+                  border: "1px solid #f0dfab",
+                  color: "#5f5128",
+                  fontSize: "13px",
+                  lineHeight: 1.55
+                }}
+              >
+                <strong>RUT con más de una persona</strong>
+                <p style={{ margin: "7px 0 10px" }}>
+                  Estos casos no se fusionarán. Cada persona tendrá su propia ficha y quedará vinculada al mismo RUT titular.
+                </p>
+                <div
+                  style={{
+                    maxHeight: "220px",
+                    overflowY: "auto",
+                    display: "grid",
+                    gap: "6px"
+                  }}
+                >
+                  {preview.conflictosDetalle.map((conflicto) => (
+                    <div key={conflicto.documento}>
+                      <strong>{conflicto.documento}:</strong>{" "}
+                      {conflicto.personas.join(" · ")}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div
               style={{
                 marginTop: "18px",
@@ -806,15 +925,17 @@ function Importaciones() {
             >
               <strong>Qué hará el importador:</strong>
               <br />
-              • Un paciente por RUT/documento normalizado.
+              • El Documento/RUT del archivo se tratará como RUT titular o de referencia.
               <br />
-              • Varias filas del mismo paciente se convertirán en varias recetas históricas.
+              • Cada persona (nombres + apellidos) tendrá su propia ficha, aunque comparta el mismo RUT titular.
+              <br />
+              • Varias filas de la misma persona se convertirán en varias recetas históricas.
               <br />
               • RX completas se separarán en esfera, cilindro y eje.
               <br />
               • RX simples conservarán la esfera y dejarán cilindro/eje vacíos.
               <br />
-              • Las recetas ya existentes por paciente + número de fórmula se omitirán.
+              • Las recetas ya existentes para esa persona + número de fórmula se omitirán.
               <br />
               • Todo lo nuevo quedará asociado a este lote y podrá deshacerse.
             </div>
