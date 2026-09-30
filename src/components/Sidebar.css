@@ -150,3 +150,34 @@
   opacity: 0.85;
   margin-top: 2px;
 }
+
+
+/* CONFIGURACION */
+.config-link {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 10px !important;
+}
+
+.config-link .menu-icon {
+  flex-shrink: 0;
+}
+
+.menu-configuracion {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.menu-configuracion-principal {
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.menu-configuracion-secundario {
+  font-size: 13px;
+  font-weight: 400;
+  opacity: 0.85;
+  margin-top: 2px;
+}
