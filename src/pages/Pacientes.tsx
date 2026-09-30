@@ -1,4 +1,5 @@
 import { useRef, useState, type ChangeEvent } from "react";
+import * as XLSX from "xlsx";
 import { supabase } from "../lib/supabase";
 
 import MainLayout from "../layout/MainLayout";
@@ -103,6 +104,75 @@ function parsearCSV(texto: string): Record<string, string>[] {
 
     return fila;
   });
+}
+
+
+async function leerFilasExcel(
+  archivo: File
+): Promise<Record<string, string>[]> {
+  const buffer = await archivo.arrayBuffer();
+
+  const libro = XLSX.read(buffer, {
+    type: "array",
+    cellDates: false
+  });
+
+  if (libro.SheetNames.length === 0) {
+    return [];
+  }
+
+  const nombreHoja = libro.SheetNames.includes("Hoja1")
+    ? "Hoja1"
+    : libro.SheetNames[0];
+
+  const hoja = libro.Sheets[nombreHoja];
+
+  if (!hoja) {
+    return [];
+  }
+
+  const filas = XLSX.utils.sheet_to_json<Record<string, unknown>>(
+    hoja,
+    {
+      defval: "",
+      raw: false
+    }
+  );
+
+  return filas.map((fila) => {
+    const resultado: Record<string, string> = {};
+
+    Object.entries(fila).forEach(([cabecera, valor]) => {
+      resultado[normalizarCabecera(cabecera)] =
+        String(valor ?? "").trim();
+    });
+
+    return resultado;
+  });
+}
+
+async function leerArchivoPacientes(
+  archivo: File
+): Promise<Record<string, string>[]> {
+  const nombre = archivo.name.toLowerCase();
+
+  if (
+    nombre.endsWith(".xlsx") ||
+    nombre.endsWith(".xls")
+  ) {
+    return leerFilasExcel(archivo);
+  }
+
+  return parsearCSV(await archivo.text());
+}
+
+function escaparHTML(valor: unknown): string {
+  return String(valor ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
 }
 
 function valorCSV(
@@ -239,9 +309,312 @@ function Pacientes() {
     await cargarPacientes();
   }
 
-  function exportarCSV() {
+  async function importarArchivo(
+    evento: ChangeEvent<HTMLInputElement>
+  ) {
+    const archivo = evento.target.files?.[0];
+
+    if (!archivo) return;
+
+    setImportando(true);
+    setMensaje("");
+    setErrorMensaje("");
+
+    try {
+      const filas = await leerArchivoPacientes(archivo);
+
+      if (filas.length === 0) {
+        throw new Error(
+          "El archivo no contiene filas válidas."
+        );
+      }
+
+      const { data: existentes, error: existentesError } =
+        await supabase
+          .from("pacientes")
+          .select("ficha, rut");
+
+      if (existentesError) {
+        throw existentesError;
+      }
+
+      const fichasExistentes = new Set(
+        (existentes || [])
+          .map((item) =>
+            String(item.ficha || "")
+              .trim()
+              .toLowerCase()
+          )
+          .filter(Boolean)
+      );
+
+      const rutsExistentes = new Set(
+        (existentes || [])
+          .map((item) =>
+            String(item.rut || "")
+              .trim()
+              .toLowerCase()
+          )
+          .filter(Boolean)
+      );
+
+      const registros: Array<{
+        ficha: string | null;
+        rut: string | null;
+        nombres: string;
+        apellidos: string | null;
+        fecha_nacimiento: string | null;
+        edad: number | null;
+        sexo: string | null;
+        telefono: string | null;
+        email: string | null;
+        direccion: string | null;
+        comuna: string | null;
+        ciudad: string | null;
+        ocupacion: string | null;
+        observaciones: string | null;
+      }> = [];
+
+      const erroresFila: string[] = [];
+      const fichasArchivo = new Set<string>();
+      const rutsArchivo = new Set<string>();
+
+      for (
+        let indice = 0;
+        indice < filas.length;
+        indice += 1
+      ) {
+        const fila = filas[indice];
+
+        const nombres = valorCSV(fila, [
+          "Nombres",
+          "Nombre"
+        ]);
+
+        if (!nombres) {
+          erroresFila.push(
+            `Fila ${indice + 2}: falta Nombres.`
+          );
+          continue;
+        }
+
+        const ficha = valorCSV(fila, [
+          "Ficha",
+          "N° Ficha",
+          "Numero Ficha",
+          "N ficha"
+        ]);
+
+        const rut = valorCSV(fila, [
+          "RUT",
+          "Rut",
+          "Documento",
+          "Documento identidad",
+          "Identificacion",
+          "Identificación"
+        ]);
+
+        const fichaNormalizada = ficha
+          .trim()
+          .toLowerCase();
+
+        const rutNormalizado = rut
+          .trim()
+          .toLowerCase();
+
+        if (
+          fichaNormalizada &&
+          (
+            fichasExistentes.has(
+              fichaNormalizada
+            ) ||
+            fichasArchivo.has(
+              fichaNormalizada
+            )
+          )
+        ) {
+          erroresFila.push(
+            `Fila ${indice + 2}: ficha ${ficha} duplicada; se omitió.`
+          );
+          continue;
+        }
+
+        if (
+          rutNormalizado &&
+          (
+            rutsExistentes.has(
+              rutNormalizado
+            ) ||
+            rutsArchivo.has(
+              rutNormalizado
+            )
+          )
+        ) {
+          erroresFila.push(
+            `Fila ${indice + 2}: RUT/Documento ${rut} ya existe o está repetido; se omitió.`
+          );
+          continue;
+        }
+
+        if (fichaNormalizada) {
+          fichasArchivo.add(
+            fichaNormalizada
+          );
+        }
+
+        if (rutNormalizado) {
+          rutsArchivo.add(
+            rutNormalizado
+          );
+        }
+
+        const fechaNacimiento = valorCSV(
+          fila,
+          [
+            "Fecha nacimiento",
+            "Fecha de nacimiento",
+            "FechaNacimiento"
+          ]
+        );
+
+        registros.push({
+          ficha: ficha || null,
+          rut: rut || null,
+          nombres: nombres.trim(),
+          apellidos:
+            valorCSV(fila, [
+              "Apellidos",
+              "Apellido"
+            ]) || null,
+          fecha_nacimiento:
+            fechaNacimiento || null,
+          edad: numeroSeguro(
+            valorCSV(fila, [
+              "Edad"
+            ])
+          ),
+          sexo:
+            valorCSV(fila, [
+              "Sexo",
+              "Genero",
+              "Género"
+            ]) || null,
+          telefono:
+            valorCSV(fila, [
+              "Telefono",
+              "Teléfono",
+              "Celular",
+              "Movil",
+              "Móvil"
+            ]) || null,
+          email:
+            valorCSV(fila, [
+              "Email",
+              "Correo",
+              "Correo electronico",
+              "Correo electrónico"
+            ]) || null,
+          direccion:
+            valorCSV(fila, [
+              "Direccion",
+              "Dirección"
+            ]) || null,
+          comuna:
+            valorCSV(fila, [
+              "Comuna"
+            ]) || null,
+          ciudad:
+            valorCSV(fila, [
+              "Ciudad"
+            ]) || null,
+          ocupacion:
+            valorCSV(fila, [
+              "Ocupacion",
+              "Ocupación"
+            ]) || null,
+          observaciones:
+            valorCSV(fila, [
+              "Observaciones",
+              "Observacion",
+              "Observación"
+            ]) || null
+        });
+      }
+
+      let importados = 0;
+
+      for (
+        let inicio = 0;
+        inicio < registros.length;
+        inicio += 50
+      ) {
+        const bloque = registros.slice(
+          inicio,
+          inicio + 50
+        );
+
+        const { error } = await supabase
+          .from("pacientes")
+          .insert(bloque);
+
+        if (error) {
+          for (const registro of bloque) {
+            const { error: errorIndividual } =
+              await supabase
+                .from("pacientes")
+                .insert([registro]);
+
+            if (errorIndividual) {
+              erroresFila.push(
+                `No se pudo importar ${registro.nombres} ${registro.apellidos || ""}: ${errorIndividual.message}`
+              );
+            } else {
+              importados += 1;
+            }
+          }
+        } else {
+          importados += bloque.length;
+        }
+      }
+
+      await cargarPacientes();
+
+      setMensaje(
+        `✓ Importación terminada. ${importados} paciente(s) importado(s).` +
+          (
+            erroresFila.length > 0
+              ? ` ${erroresFila.length} fila(s) fueron omitidas o presentaron errores.`
+              : ""
+          )
+      );
+
+      if (erroresFila.length > 0) {
+        console.warn(
+          "Detalles de importación:",
+          erroresFila
+        );
+      }
+    } catch (error: any) {
+      console.error(error);
+
+      setErrorMensaje(
+        error?.message ||
+          "No fue posible importar el archivo."
+      );
+    } finally {
+      setImportando(false);
+
+      if (inputImportarRef.current) {
+        inputImportarRef.current.value = "";
+      }
+    }
+  }
+
+  function exportarExcel() {
     if (pacientesRegistros.length === 0) {
-      alert("No hay pacientes para exportar.");
+      alert(
+        "No hay pacientes para exportar."
+      );
       return;
     }
 
@@ -285,43 +658,47 @@ function Pacientes() {
       ]
     );
 
-    const escapar = (valor: unknown) => {
-      const texto = String(valor ?? "");
-      return `"${texto.replace(/"/g, '""')}"`;
-    };
-
-    const csv = [
+    const hoja = XLSX.utils.aoa_to_sheet([
       encabezados,
       ...filas
-    ]
-      .map((fila) =>
-        fila.map(escapar).join(";")
-      )
-      .join("\r\n");
+    ]);
 
-    const blob = new Blob(
-      ["\uFEFF" + csv],
-      {
-        type: "text/csv;charset=utf-8;"
-      }
+    hoja["!cols"] = [
+      { wch: 8 },
+      { wch: 15 },
+      { wch: 16 },
+      { wch: 20 },
+      { wch: 24 },
+      { wch: 16 },
+      { wch: 8 },
+      { wch: 14 },
+      { wch: 16 },
+      { wch: 28 },
+      { wch: 30 },
+      { wch: 18 },
+      { wch: 18 },
+      { wch: 22 },
+      { wch: 40 },
+      { wch: 22 }
+    ];
+
+    const libro = XLSX.utils.book_new();
+
+    XLSX.utils.book_append_sheet(
+      libro,
+      hoja,
+      "Pacientes"
     );
 
-    const url = URL.createObjectURL(blob);
-    const enlace = document.createElement("a");
-
-    enlace.href = url;
-    enlace.download = `pacientes-ahorro-vision-${new Date()
-      .toISOString()
-      .slice(0, 10)}.csv`;
-
-    document.body.appendChild(enlace);
-    enlace.click();
-    enlace.remove();
-
-    URL.revokeObjectURL(url);
+    XLSX.writeFile(
+      libro,
+      `pacientes-ahorro-vision-${new Date()
+        .toISOString()
+        .slice(0, 10)}.xlsx`
+    );
   }
 
-  function descargarPlantillaCSV() {
+  function descargarPlantillaExcel() {
     const encabezados = [
       "Ficha",
       "RUT",
@@ -356,255 +733,170 @@ function Pacientes() {
       "Cliente importado"
     ];
 
-    const escapar = (valor: unknown) =>
-      `"${String(valor ?? "").replace(/"/g, '""')}"`;
-
-    const csv = [
+    const hoja = XLSX.utils.aoa_to_sheet([
       encabezados,
       ejemplo
-    ]
-      .map((fila) =>
-        fila.map(escapar).join(";")
-      )
-      .join("\r\n");
+    ]);
 
-    const blob = new Blob(
-      ["\uFEFF" + csv],
-      {
-        type: "text/csv;charset=utf-8;"
-      }
+    hoja["!cols"] = [
+      { wch: 15 },
+      { wch: 16 },
+      { wch: 20 },
+      { wch: 24 },
+      { wch: 18 },
+      { wch: 8 },
+      { wch: 14 },
+      { wch: 18 },
+      { wch: 30 },
+      { wch: 30 },
+      { wch: 18 },
+      { wch: 18 },
+      { wch: 22 },
+      { wch: 40 }
+    ];
+
+    const libro = XLSX.utils.book_new();
+
+    XLSX.utils.book_append_sheet(
+      libro,
+      hoja,
+      "Pacientes"
     );
 
-    const url = URL.createObjectURL(blob);
-    const enlace = document.createElement("a");
-
-    enlace.href = url;
-    enlace.download =
-      "plantilla-importacion-pacientes-ahorro-vision.csv";
-
-    document.body.appendChild(enlace);
-    enlace.click();
-    enlace.remove();
-
-    URL.revokeObjectURL(url);
+    XLSX.writeFile(
+      libro,
+      "plantilla-pacientes-ahorro-vision.xlsx"
+    );
   }
 
-  async function importarCSV(
-    evento: ChangeEvent<HTMLInputElement>
-  ) {
-    const archivo = evento.target.files?.[0];
-
-    if (!archivo) return;
-
-    setImportando(true);
-    setMensaje("");
-    setErrorMensaje("");
-
-    try {
-      const texto = await archivo.text();
-      const filas = parsearCSV(texto);
-
-      if (filas.length === 0) {
-        throw new Error(
-          "El archivo no contiene filas válidas."
-        );
-      }
-
-      const { data: existentes, error: existentesError } =
-        await supabase
-          .from("pacientes")
-          .select("ficha")
-          .not("ficha", "is", null);
-
-      if (existentesError) {
-        throw existentesError;
-      }
-
-      const fichasExistentes = new Set(
-        (existentes || [])
-          .map((item) =>
-            String(item.ficha || "")
-              .trim()
-              .toLowerCase()
-          )
-          .filter(Boolean)
+  function imprimirPDF() {
+    if (pacientesRegistros.length === 0) {
+      alert(
+        "No hay pacientes para imprimir."
       );
-
-      const registros = [];
-      const erroresFila: string[] = [];
-      const fichasArchivo = new Set<string>();
-
-      for (let indice = 0; indice < filas.length; indice += 1) {
-        const fila = filas[indice];
-
-        const nombres = valorCSV(fila, [
-          "Nombres",
-          "Nombre"
-        ]);
-
-        if (!nombres) {
-          erroresFila.push(
-            `Fila ${indice + 2}: falta Nombres.`
-          );
-          continue;
-        }
-
-        const ficha = valorCSV(fila, [
-          "Ficha",
-          "N° Ficha",
-          "Numero Ficha"
-        ]);
-
-        const fichaNormalizada = ficha
-          .trim()
-          .toLowerCase();
-
-        if (
-          fichaNormalizada &&
-          (fichasExistentes.has(
-            fichaNormalizada
-          ) ||
-            fichasArchivo.has(
-              fichaNormalizada
-            ))
-        ) {
-          erroresFila.push(
-            `Fila ${indice + 2}: ficha ${ficha} duplicada; se omitió.`
-          );
-          continue;
-        }
-
-        if (fichaNormalizada) {
-          fichasArchivo.add(
-            fichaNormalizada
-          );
-        }
-
-        const fechaNacimiento = valorCSV(
-          fila,
-          [
-            "Fecha nacimiento",
-            "Fecha de nacimiento",
-            "FechaNacimiento"
-          ]
-        );
-
-        const registro = {
-          ficha: ficha || null,
-          rut:
-            valorCSV(fila, ["RUT", "Rut"]) ||
-            null,
-          nombres,
-          apellidos:
-            valorCSV(fila, [
-              "Apellidos",
-              "Apellido"
-            ]) || null,
-          fecha_nacimiento:
-            fechaNacimiento || null,
-          edad: numeroSeguro(
-            valorCSV(fila, ["Edad"])
-          ),
-          sexo:
-            valorCSV(fila, ["Sexo", "Genero", "Género"]) ||
-            null,
-          telefono:
-            valorCSV(fila, [
-              "Telefono",
-              "Teléfono",
-              "Celular"
-            ]) || null,
-          email:
-            valorCSV(fila, [
-              "Email",
-              "Correo",
-              "Correo electronico",
-              "Correo electrónico"
-            ]) || null,
-          direccion:
-            valorCSV(fila, [
-              "Direccion",
-              "Dirección"
-            ]) || null,
-          comuna:
-            valorCSV(fila, ["Comuna"]) || null,
-          ciudad:
-            valorCSV(fila, ["Ciudad"]) || null,
-          ocupacion:
-            valorCSV(fila, ["Ocupacion", "Ocupación"]) ||
-            null,
-          observaciones:
-            valorCSV(fila, [
-              "Observaciones",
-              "Observacion",
-              "Observación"
-            ]) || null
-        };
-
-        registros.push(registro);
-      }
-
-      let importados = 0;
-
-      for (let inicio = 0; inicio < registros.length; inicio += 50) {
-        const bloque = registros.slice(
-          inicio,
-          inicio + 50
-        );
-
-        const { error } = await supabase
-          .from("pacientes")
-          .insert(bloque);
-
-        if (error) {
-          for (const registro of bloque) {
-            const { error: errorIndividual } =
-              await supabase
-                .from("pacientes")
-                .insert([registro]);
-
-            if (errorIndividual) {
-              erroresFila.push(
-                `No se pudo importar ${registro.nombres} ${registro.apellidos || ""}: ${errorIndividual.message}`
-              );
-            } else {
-              importados += 1;
-            }
-          }
-        } else {
-          importados += bloque.length;
-        }
-      }
-
-      await cargarPacientes();
-
-      setMensaje(
-        `✓ Importación terminada. ${importados} paciente(s) importado(s).` +
-          (erroresFila.length > 0
-            ? ` ${erroresFila.length} fila(s) fueron omitidas o presentaron errores.`
-            : "")
-      );
-
-      if (erroresFila.length > 0) {
-        console.warn(
-          "Detalles de importación:",
-          erroresFila
-        );
-      }
-    } catch (error: any) {
-      console.error(error);
-
-      setErrorMensaje(
-        error?.message ||
-          "No fue posible importar el archivo."
-      );
-    } finally {
-      setImportando(false);
-
-      if (inputImportarRef.current) {
-        inputImportarRef.current.value = "";
-      }
+      return;
     }
+
+    const filas = pacientesRegistros
+      .map(
+        (paciente) => `
+          <tr>
+            <td>${escaparHTML(paciente.id)}</td>
+            <td>${escaparHTML(paciente.ficha || "")}</td>
+            <td>${escaparHTML(paciente.rut || "")}</td>
+            <td>${escaparHTML(paciente.nombres || "")}</td>
+            <td>${escaparHTML(paciente.apellidos || "")}</td>
+            <td>${escaparHTML(paciente.telefono || "")}</td>
+            <td>${escaparHTML(paciente.email || "")}</td>
+            <td>${escaparHTML(paciente.comuna || "")}</td>
+            <td>${escaparHTML(paciente.ciudad || "")}</td>
+          </tr>
+        `
+      )
+      .join("");
+
+    const ventana = window.open(
+      "",
+      "_blank",
+      "width=1200,height=800"
+    );
+
+    if (!ventana) {
+      alert(
+        "El navegador bloqueó la ventana de impresión. Permite ventanas emergentes para este sitio."
+      );
+      return;
+    }
+
+    ventana.document.write(`
+      <!doctype html>
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <title>Pacientes - Ahorro Visión</title>
+          <style>
+            @page {
+              size: A4 landscape;
+              margin: 10mm;
+            }
+
+            body {
+              font-family: Arial, sans-serif;
+              color: #222;
+              margin: 0;
+              padding: 0;
+            }
+
+            h1 {
+              color: #cc001f;
+              margin: 0 0 4px;
+            }
+
+            .subtitulo {
+              color: #666;
+              margin-bottom: 18px;
+              font-size: 13px;
+            }
+
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              font-size: 10px;
+            }
+
+            th {
+              background: #f1f1f1;
+              text-align: left;
+              padding: 7px;
+              border: 1px solid #ccc;
+            }
+
+            td {
+              padding: 6px;
+              border: 1px solid #ddd;
+            }
+          </style>
+        </head>
+        <body>
+          <h1>Ahorro Visión ERP</h1>
+          <div class="subtitulo">
+            Listado de pacientes · ${new Date().toLocaleDateString("es-CL")}
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Ficha</th>
+                <th>RUT</th>
+                <th>Nombres</th>
+                <th>Apellidos</th>
+                <th>Teléfono</th>
+                <th>Email</th>
+                <th>Comuna</th>
+                <th>Ciudad</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              ${filas}
+            </tbody>
+          </table>
+
+          <script>
+            window.onload = function() {
+              window.print();
+            };
+
+            window.onafterprint = function() {
+              window.close();
+            };
+          </script>
+        </body>
+      </html>
+    `);
+
+    ventana.document.close();
   }
 
   return (
@@ -668,28 +960,35 @@ function Pacientes() {
         >
           {importando
             ? "Importando..."
-            : "↑ Importar CSV"}
+            : "↑ Importar Excel"}
         </button>
 
         <button
           className="btn-secondary"
-          onClick={descargarPlantillaCSV}
+          onClick={descargarPlantillaExcel}
         >
-          ↓ Plantilla
+          ↓ Plantilla Excel
         </button>
 
         <button
           className="btn-secondary"
-          onClick={exportarCSV}
+          onClick={exportarExcel}
         >
-          ↓ Exportar CSV
+          ↓ Exportar Excel
+        </button>
+
+        <button
+          className="btn-secondary"
+          onClick={imprimirPDF}
+        >
+          🖨️ Imprimir / PDF
         </button>
 
         <input
           ref={inputImportarRef}
           type="file"
-          accept=".csv,.txt"
-          onChange={importarCSV}
+          accept=".xlsx,.xls,.csv,.txt"
+          onChange={importarArchivo}
           style={{ display: "none" }}
         />
       </div>
