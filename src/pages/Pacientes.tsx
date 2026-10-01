@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import * as XLSX from "xlsx";
 import { supabase } from "../lib/supabase";
 
@@ -67,6 +68,8 @@ function escaparHTML(valor: unknown): string {
 }
 
 function Pacientes() {
+  const navigate = useNavigate();
+
   const [registros, setRegistros] = useState<Paciente[]>([]);
   const [filas, setFilas] = useState<any[][]>([]);
   const [seleccionado, setSeleccionado] = useState<Paciente | null>(null);
@@ -300,7 +303,20 @@ function Pacientes() {
         {filtrados.length > 12 && <div style={{ marginTop:10, fontSize:12, color:"#777" }}>Se muestran los primeros 12 resultados; la tabla contiene el resto.</div>}
       </div>}
 
-      {cargando ? <div style={{ background:"#fff", border:"1px solid #e5e5e5", borderRadius:12, padding:30, textAlign:"center", color:"#666" }}>Cargando pacientes...</div> : <DataTable columns={columnas} data={filas} onEditar={editarPaciente} onEliminar={eliminarPaciente} />}
+      {cargando ? (
+        <div style={{ background:"#fff", border:"1px solid #e5e5e5", borderRadius:12, padding:30, textAlign:"center", color:"#666" }}>
+          Cargando pacientes...
+        </div>
+      ) : (
+        <DataTable
+          columns={columnas}
+          data={filas}
+          onVerReceta={(p) => navigate(`/pacientes/${p.id}/recetas`)}
+          onVerFicha={(p) => navigate(`/pacientes/${p.id}/ficha-medica`)}
+          onEditar={editarPaciente}
+          onEliminar={eliminarPaciente}
+        />
+      )}
 
       <PatientModal isOpen={modalAbierto} title={seleccionado ? "Editar Paciente" : "Nuevo Paciente"} onClose={() => { setModalAbierto(false); setSeleccionado(null); }}>
         <PatientForm paciente={seleccionado} onClose={() => { setModalAbierto(false); setSeleccionado(null); }} onPacienteGuardado={cargarPacientes} />
