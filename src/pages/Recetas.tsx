@@ -13,6 +13,7 @@ interface Paciente {
   id: number;
   ficha: string | null;
   rut: string | null;
+  rut_titular: string | null;
   nombres: string;
   apellidos: string | null;
 }
@@ -48,6 +49,11 @@ interface Receta {
 
   fecha_registro: string | null;
   fecha_actualizacion: string | null;
+
+  // Conserva literalmente los signos de la RX cuando la receta fue registrada
+  // desde el formulario o cuando el dato histórico los trae explícitamente.
+  rx_od_original: string | null;
+  rx_oi_original: string | null;
 }
 
 interface FormularioReceta {
@@ -130,23 +136,14 @@ function formatearFecha(
   return `${partes[2]}-${partes[1]}-${partes[0]}`;
 }
 
-function formatearValorNumerico(
-  valor: number | null
-): string {
-  if (
-    valor === null ||
-    valor === undefined
-  ) {
-    return "-";
-  }
-
-  return String(valor);
+function limpiarNumeroTexto(valor: string): string {
+  return valor.trim().replace(",", ".");
 }
 
 function convertirNumeroOpcional(
   valor: string
 ): number | null {
-  const texto = valor.trim();
+  const texto = limpiarNumeroTexto(valor);
 
   if (!texto) {
     return null;
@@ -159,6 +156,101 @@ function convertirNumeroOpcional(
   }
 
   return numero;
+}
+
+function tieneSignoExplicito(valor: string): boolean {
+  return /^[+-](?:\d+(?:[.,]\d+)?)$/.test(
+    valor.trim()
+  );
+}
+
+function obtenerPartesRxOriginal(
+  valor: string | null
+): {
+  esfera: string;
+  cilindro: string;
+  eje: string;
+} {
+  const original = String(valor || "").trim();
+
+  if (!original) {
+    return { esfera: "", cilindro: "", eje: "" };
+  }
+
+  const completa = original.match(
+    /^\s*([+-]\d+(?:[.,]\d+)?)\s+([+-]\d+(?:[.,]\d+)?)°(\d{1,3})\s*$/
+  );
+
+  if (completa) {
+    return {
+      esfera: completa[1],
+      cilindro: completa[2],
+      eje: completa[3]
+    };
+  }
+
+  const simple = original.match(
+    /^\s*([+-]\d+(?:[.,]\d+)?)\s*$/
+  );
+
+  if (simple) {
+    return { esfera: simple[1], cilindro: "", eje: "" };
+  }
+
+  return { esfera: "", cilindro: "", eje: "" };
+}
+
+function valorDioParaEditar(
+  valorNumerico: number | null,
+  original: string | null,
+  parte: "esfera" | "cilindro"
+): string {
+  const partes = obtenerPartesRxOriginal(original);
+
+  if (partes[parte]) {
+    return partes[parte];
+  }
+
+  // Un negativo almacenado en numeric es inequívocamente negativo.
+  // Un positivo/0 no revela si originalmente se escribió con + o sin signo,
+  // por lo que se deja vacío y obliga a reingresarlo explícitamente.
+  if (valorNumerico !== null && valorNumerico < 0) {
+    return String(valorNumerico);
+  }
+
+  return "";
+}
+
+function formatearDioptriaListado(
+  valorNumerico: number | null,
+  original: string | null,
+  parte: "esfera" | "cilindro"
+): string {
+  const partes = obtenerPartesRxOriginal(original);
+
+  if (partes[parte]) {
+    return partes[parte];
+  }
+
+  if (valorNumerico === null || valorNumerico === undefined) {
+    return "-";
+  }
+
+  if (valorNumerico < 0) {
+    return String(valorNumerico);
+  }
+
+  return "Signo no registrado";
+}
+
+function valorAdicionParaEditar(
+  valor: string | null
+): string {
+  const texto = String(valor || "").trim();
+
+  return tieneSignoExplicito(texto)
+    ? texto
+    : "";
 }
 
 function Recetas() {
@@ -216,7 +308,7 @@ function Recetas() {
       supabase
         .from("pacientes")
         .select(
-          "id, ficha, rut, nombres, apellidos"
+          "id, ficha, rut, rut_titular, nombres, apellidos"
         )
         .order("nombres", {
           ascending: true
@@ -331,6 +423,11 @@ function Recetas() {
             paciente.rut || ""
           ).toLowerCase();
 
+        const rutTitular =
+          (
+            paciente.rut_titular || ""
+          ).toLowerCase();
+
         const ficha =
           (
             paciente.ficha || ""
@@ -339,6 +436,7 @@ function Recetas() {
         return (
           nombre.includes(texto) ||
           rut.includes(texto) ||
+          rutTitular.includes(texto) ||
           ficha.includes(texto)
         );
       }
@@ -483,16 +581,18 @@ function Recetas() {
         receta.motivo_receta || "",
 
       esfera_od:
-        receta.esfera_od !== null
-          ? String(receta.esfera_od)
-          : "",
+        valorDioParaEditar(
+          receta.esfera_od,
+          receta.rx_od_original,
+          "esfera"
+        ),
 
       cilindro_od:
-        receta.cilindro_od !== null
-          ? String(
-              receta.cilindro_od
-            )
-          : "",
+        valorDioParaEditar(
+          receta.cilindro_od,
+          receta.rx_od_original,
+          "cilindro"
+        ),
 
       eje_od:
         receta.eje_od !== null
@@ -500,22 +600,26 @@ function Recetas() {
           : "",
 
       adicion_od:
-        receta.adicion_od || "",
+        valorAdicionParaEditar(
+          receta.adicion_od
+        ),
 
       agudeza_visual_od:
         receta.agudeza_visual_od || "",
 
       esfera_oi:
-        receta.esfera_oi !== null
-          ? String(receta.esfera_oi)
-          : "",
+        valorDioParaEditar(
+          receta.esfera_oi,
+          receta.rx_oi_original,
+          "esfera"
+        ),
 
       cilindro_oi:
-        receta.cilindro_oi !== null
-          ? String(
-              receta.cilindro_oi
-            )
-          : "",
+        valorDioParaEditar(
+          receta.cilindro_oi,
+          receta.rx_oi_original,
+          "cilindro"
+        ),
 
       eje_oi:
         receta.eje_oi !== null
@@ -523,7 +627,9 @@ function Recetas() {
           : "",
 
       adicion_oi:
-        receta.adicion_oi || "",
+        valorAdicionParaEditar(
+          receta.adicion_oi
+        ),
 
       agudeza_visual_oi:
         receta.agudeza_visual_oi || "",
@@ -575,43 +681,36 @@ function Recetas() {
       return;
     }
 
-    const esferaOD =
-      convertirNumeroOpcional(
-        formulario.esfera_od
-      );
+    const camposDioptricos = [
+      { nombre: "Esfera OD", valor: formulario.esfera_od },
+      { nombre: "Cilindro OD", valor: formulario.cilindro_od },
+      { nombre: "Adición OD", valor: formulario.adicion_od },
+      { nombre: "Esfera OI", valor: formulario.esfera_oi },
+      { nombre: "Cilindro OI", valor: formulario.cilindro_oi },
+      { nombre: "Adición OI", valor: formulario.adicion_oi }
+    ];
 
-    const cilindroOD =
-      convertirNumeroOpcional(
-        formulario.cilindro_od
-      );
+    for (const campo of camposDioptricos) {
+      if (campo.valor.trim() && !tieneSignoExplicito(campo.valor)) {
+        setErrorMensaje(
+          `${campo.nombre}: debes escribir el signo + o - explícitamente. Ejemplo: +1.00 o -1.00.`
+        );
+        return;
+      }
+    }
 
-    const ejeOD =
-      convertirNumeroOpcional(
-        formulario.eje_od
-      );
-
-    const esferaOI =
-      convertirNumeroOpcional(
-        formulario.esfera_oi
-      );
-
-    const cilindroOI =
-      convertirNumeroOpcional(
-        formulario.cilindro_oi
-      );
-
-    const ejeOI =
-      convertirNumeroOpcional(
-        formulario.eje_oi
-      );
+    const esferaOD = convertirNumeroOpcional(formulario.esfera_od);
+    const cilindroOD = convertirNumeroOpcional(formulario.cilindro_od);
+    const ejeOD = convertirNumeroOpcional(formulario.eje_od);
+    const esferaOI = convertirNumeroOpcional(formulario.esfera_oi);
+    const cilindroOI = convertirNumeroOpcional(formulario.cilindro_oi);
+    const ejeOI = convertirNumeroOpcional(formulario.eje_oi);
 
     if (
       formulario.esfera_od.trim() &&
       esferaOD === null
     ) {
-      setErrorMensaje(
-        "La esfera OD no contiene un número válido."
-      );
+      setErrorMensaje("La esfera OD no contiene un número válido.");
       return;
     }
 
@@ -619,9 +718,7 @@ function Recetas() {
       formulario.cilindro_od.trim() &&
       cilindroOD === null
     ) {
-      setErrorMensaje(
-        "El cilindro OD no contiene un número válido."
-      );
+      setErrorMensaje("El cilindro OD no contiene un número válido.");
       return;
     }
 
@@ -629,9 +726,7 @@ function Recetas() {
       formulario.esfera_oi.trim() &&
       esferaOI === null
     ) {
-      setErrorMensaje(
-        "La esfera OI no contiene un número válido."
-      );
+      setErrorMensaje("La esfera OI no contiene un número válido.");
       return;
     }
 
@@ -639,9 +734,7 @@ function Recetas() {
       formulario.cilindro_oi.trim() &&
       cilindroOI === null
     ) {
-      setErrorMensaje(
-        "El cilindro OI no contiene un número válido."
-      );
+      setErrorMensaje("El cilindro OI no contiene un número válido.");
       return;
     }
 
@@ -672,6 +765,42 @@ function Recetas() {
       setErrorMensaje(
         "El eje OI debe ser un número entero entre 0 y 180."
       );
+      return;
+    }
+
+    if (formulario.cilindro_od.trim() && !formulario.eje_od.trim()) {
+      setErrorMensaje("Si registras cilindro OD, debes indicar también el eje OD.");
+      return;
+    }
+
+    if (
+      (formulario.cilindro_od.trim() || formulario.eje_od.trim()) &&
+      !formulario.esfera_od.trim()
+    ) {
+      setErrorMensaje("Si registras cilindro o eje OD, debes indicar también la esfera OD con signo explícito. Ejemplo: +0.00.");
+      return;
+    }
+
+    if (!formulario.cilindro_od.trim() && formulario.eje_od.trim()) {
+      setErrorMensaje("El eje OD requiere un cilindro OD explícito.");
+      return;
+    }
+
+    if (formulario.cilindro_oi.trim() && !formulario.eje_oi.trim()) {
+      setErrorMensaje("Si registras cilindro OI, debes indicar también el eje OI.");
+      return;
+    }
+
+    if (
+      (formulario.cilindro_oi.trim() || formulario.eje_oi.trim()) &&
+      !formulario.esfera_oi.trim()
+    ) {
+      setErrorMensaje("Si registras cilindro o eje OI, debes indicar también la esfera OI con signo explícito. Ejemplo: +0.00.");
+      return;
+    }
+
+    if (!formulario.cilindro_oi.trim() && formulario.eje_oi.trim()) {
+      setErrorMensaje("El eje OI requiere un cilindro OI explícito.");
       return;
     }
 
@@ -713,6 +842,16 @@ function Recetas() {
           ? Math.trunc(ejeOD)
           : null,
 
+      rx_od_original:
+        [
+          formulario.esfera_od.trim(),
+          formulario.cilindro_od.trim()
+            ? `${formulario.cilindro_od.trim()}°${ejeOD !== null ? Math.trunc(ejeOD) : ""}`
+            : ""
+        ]
+          .filter(Boolean)
+          .join(" ") || null,
+
       adicion_od:
         formulario.adicion_od.trim() ||
         null,
@@ -729,6 +868,16 @@ function Recetas() {
         ejeOI !== null
           ? Math.trunc(ejeOI)
           : null,
+
+      rx_oi_original:
+        [
+          formulario.esfera_oi.trim(),
+          formulario.cilindro_oi.trim()
+            ? `${formulario.cilindro_oi.trim()}°${ejeOI !== null ? Math.trunc(ejeOI) : ""}`
+            : ""
+        ]
+          .filter(Boolean)
+          .join(" ") || null,
 
       adicion_oi:
         formulario.adicion_oi.trim() ||
@@ -1298,6 +1447,7 @@ function Recetas() {
                             paciente.apellidos ||
                             ""
                           }
+                          {paciente.rut_titular ? ` · Titular ${paciente.rut_titular}` : ""}
                           {
                             paciente.ficha
                               ? ` · Ficha ${paciente.ficha}`
@@ -1552,12 +1702,12 @@ function Recetas() {
                 <div className="campo">
 
                   <label>
-                    Esfera
+                    Esfera · signo obligatorio (+ / -)
                   </label>
 
                   <input
-                    type="number"
-                    step="0.25"
+                    type="text"
+                    inputMode="decimal"
                     value={
                       formulario.esfera_od
                     }
@@ -1567,7 +1717,7 @@ function Recetas() {
                         event.target.value
                       )
                     }
-                    placeholder="-2.50"
+                    placeholder="Ej: +2.50 o -2.50"
                   />
 
                 </div>
@@ -1575,12 +1725,12 @@ function Recetas() {
                 <div className="campo">
 
                   <label>
-                    Cilindro
+                    Cilindro · signo obligatorio (+ / -)
                   </label>
 
                   <input
-                    type="number"
-                    step="0.25"
+                    type="text"
+                    inputMode="decimal"
                     value={
                       formulario.cilindro_od
                     }
@@ -1590,7 +1740,7 @@ function Recetas() {
                         event.target.value
                       )
                     }
-                    placeholder="-0.75"
+                    placeholder="Ej: +0.75 o -0.75"
                   />
 
                 </div>
@@ -1623,7 +1773,7 @@ function Recetas() {
                 <div className="campo">
 
                   <label>
-                    Adición
+                    Adición · signo obligatorio (+ / -)
                   </label>
 
                   <input
@@ -1637,7 +1787,7 @@ function Recetas() {
                         event.target.value
                       )
                     }
-                    placeholder="+2.00"
+                    placeholder="Ej: +2.00 o -2.00"
                   />
 
                 </div>
@@ -1681,12 +1831,12 @@ function Recetas() {
                 <div className="campo">
 
                   <label>
-                    Esfera
+                    Esfera · signo obligatorio (+ / -)
                   </label>
 
                   <input
-                    type="number"
-                    step="0.25"
+                    type="text"
+                    inputMode="decimal"
                     value={
                       formulario.esfera_oi
                     }
@@ -1696,7 +1846,7 @@ function Recetas() {
                         event.target.value
                       )
                     }
-                    placeholder="-2.25"
+                    placeholder="Ej: +2.25 o -2.25"
                   />
 
                 </div>
@@ -1704,12 +1854,12 @@ function Recetas() {
                 <div className="campo">
 
                   <label>
-                    Cilindro
+                    Cilindro · signo obligatorio (+ / -)
                   </label>
 
                   <input
-                    type="number"
-                    step="0.25"
+                    type="text"
+                    inputMode="decimal"
                     value={
                       formulario.cilindro_oi
                     }
@@ -1719,7 +1869,7 @@ function Recetas() {
                         event.target.value
                       )
                     }
-                    placeholder="-0.50"
+                    placeholder="Ej: +0.50 o -0.50"
                   />
 
                 </div>
@@ -1752,7 +1902,7 @@ function Recetas() {
                 <div className="campo">
 
                   <label>
-                    Adición
+                    Adición · signo obligatorio (+ / -)
                   </label>
 
                   <input
@@ -1766,7 +1916,7 @@ function Recetas() {
                         event.target.value
                       )
                     }
-                    placeholder="+2.00"
+                    placeholder="Ej: +2.00 o -2.00"
                   />
 
                 </div>
@@ -2121,31 +2271,35 @@ function Recetas() {
                           </td>
 
                           <td>
-                            {formatearValorNumerico(
-                              receta.esfera_od
+                            {formatearDioptriaListado(
+                              receta.esfera_od,
+                              receta.rx_od_original,
+                              "esfera"
                             )}
                             {" / "}
-                            {formatearValorNumerico(
-                              receta.cilindro_od
+                            {formatearDioptriaListado(
+                              receta.cilindro_od,
+                              receta.rx_od_original,
+                              "cilindro"
                             )}
                             {" / "}
-                            {formatearValorNumerico(
-                              receta.eje_od
-                            )}
+                            {receta.eje_od !== null ? `${receta.eje_od}°` : "-"}
                           </td>
 
                           <td>
-                            {formatearValorNumerico(
-                              receta.esfera_oi
+                            {formatearDioptriaListado(
+                              receta.esfera_oi,
+                              receta.rx_oi_original,
+                              "esfera"
                             )}
                             {" / "}
-                            {formatearValorNumerico(
-                              receta.cilindro_oi
+                            {formatearDioptriaListado(
+                              receta.cilindro_oi,
+                              receta.rx_oi_original,
+                              "cilindro"
                             )}
                             {" / "}
-                            {formatearValorNumerico(
-                              receta.eje_oi
-                            )}
+                            {receta.eje_oi !== null ? `${receta.eje_oi}°` : "-"}
                           </td>
 
                           <td>
