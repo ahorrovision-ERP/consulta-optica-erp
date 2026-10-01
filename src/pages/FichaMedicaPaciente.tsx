@@ -261,16 +261,16 @@ function FichaMedicaPaciente() {
                         <td style={td}><strong>OD</strong></td>
                         <td style={td}>{mostrarDioptriaHistoria(historia.esfera_od, historia.rx_od_original)}</td>
                         <td style={td}>{mostrarDioptriaHistoria(historia.cilindro_od, historia.rx_od_original)}</td>
-                        <td style={td}>{historia.eje_od ?? "—"}</td>
-                        <td style={td}>{historia.agudeza_visual_od ?? "—"}</td>
+                        <td style={td}>{String(historia.eje_od ?? "—")}</td>
+                        <td style={td}>{String(historia.agudeza_visual_od ?? "—")}</td>
                       </tr>
 
                       <tr>
                         <td style={td}><strong>OI</strong></td>
                         <td style={td}>{mostrarDioptriaHistoria(historia.esfera_oi, historia.rx_oi_original)}</td>
                         <td style={td}>{mostrarDioptriaHistoria(historia.cilindro_oi, historia.rx_oi_original)}</td>
-                        <td style={td}>{historia.eje_oi ?? "—"}</td>
-                        <td style={td}>{historia.agudeza_visual_oi ?? "—"}</td>
+                        <td style={td}>{String(historia.eje_oi ?? "—")}</td>
+                        <td style={td}>{String(historia.agudeza_visual_oi ?? "—")}</td>
                       </tr>
                     </tbody>
                   </table>
