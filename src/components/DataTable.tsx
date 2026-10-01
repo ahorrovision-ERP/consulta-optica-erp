@@ -3,6 +3,8 @@ import { useMemo, useState, type CSSProperties } from "react";
 interface DataTableProps {
   columns: string[];
   data: any[][];
+  onVerReceta?: (registro: any) => void;
+  onVerFicha?: (registro: any) => void;
   onEditar?: (registro: any) => void;
   onEliminar?: (registro: any) => void;
 }
@@ -12,6 +14,8 @@ const PAGE_SIZES = [25, 50, 100];
 function DataTable({
   columns,
   data,
+  onVerReceta,
+  onVerFicha,
   onEditar,
   onEliminar
 }: DataTableProps) {
@@ -222,16 +226,55 @@ function DataTable({
                                 <div
                                   style={{
                                     display: "flex",
-                                    gap: "7px"
+                                    gap: "7px",
+                                    flexWrap: "wrap"
                                   }}
                                 >
+                                  {onVerReceta && (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        onVerReceta(registro)
+                                      }
+                                      style={{
+                                        border: "none",
+                                        borderRadius: "8px",
+                                        padding: "7px 9px",
+                                        background: "#f1f6ff",
+                                        color: "#245a9b",
+                                        cursor: "pointer",
+                                        fontWeight: 700
+                                      }}
+                                    >
+                                      Ver receta
+                                    </button>
+                                  )}
+
+                                  {onVerFicha && (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        onVerFicha(registro)
+                                      }
+                                      style={{
+                                        border: "none",
+                                        borderRadius: "8px",
+                                        padding: "7px 9px",
+                                        background: "#f3f3f3",
+                                        color: "#333333",
+                                        cursor: "pointer",
+                                        fontWeight: 700
+                                      }}
+                                    >
+                                      Ficha médica
+                                    </button>
+                                  )}
+
                                   {onEditar && (
                                     <button
                                       type="button"
                                       onClick={() =>
-                                        onEditar(
-                                          registro
-                                        )
+                                        onEditar(registro)
                                       }
                                       style={{
                                         border: "none",
@@ -251,9 +294,7 @@ function DataTable({
                                     <button
                                       type="button"
                                       onClick={() =>
-                                        onEliminar(
-                                          registro
-                                        )
+                                        onEliminar(registro)
                                       }
                                       style={{
                                         border: "none",
