@@ -118,50 +118,6 @@ function separarRxOriginal(valor: string | null | undefined): {
   return { esfera: null, cilindro: null, eje: null, valida: false };
 }
 
-function mostrarValorDioptria(
-  valorNumerico: number | null,
-  original: string | null | undefined
-): string {
-  const rx = separarRxOriginal(original);
-
-  if (rx.valida && rx.esfera) {
-    return rx.esfera;
-  }
-
-  if (valorNumerico !== null) {
-    return "Signo original no registrado";
-  }
-
-  return "—";
-}
-
-function mostrarCilindro(
-  valorNumerico: number | null,
-  original: string | null | undefined
-): string {
-  const rx = separarRxOriginal(original);
-
-  if (rx.valida && rx.cilindro) {
-    return rx.cilindro;
-  }
-
-  if (valorNumerico !== null) {
-    return "Signo original no registrado";
-  }
-
-  return "—";
-}
-
-function mostrarEje(
-  valorNumerico: number | null,
-  original: string | null | undefined
-): string {
-  const rx = separarRxOriginal(original);
-  if (rx.valida && rx.eje) return `${rx.eje}°`;
-  if (valorNumerico !== null) return String(valorNumerico);
-  return "—";
-}
-
 function estiloBoton() {
   return {
     border: "1px solid #ddd",
