@@ -1,6 +1,5 @@
 import {
   useEffect,
-  useMemo,
   useState,
   type FormEvent
 } from "react";
@@ -13,7 +12,6 @@ interface Paciente {
   id: number;
   ficha: string | null;
   rut: string | null;
-  rut_titular: string | null;
   nombres: string;
   apellidos: string | null;
 }
@@ -50,8 +48,6 @@ interface Receta {
   fecha_registro: string | null;
   fecha_actualizacion: string | null;
 
-  // Conserva literalmente los signos de la RX cuando la receta fue registrada
-  // desde el formulario o cuando el dato histórico los trae explícitamente.
   rx_od_original: string | null;
   rx_oi_original: string | null;
 }
@@ -136,14 +132,10 @@ function formatearFecha(
   return `${partes[2]}-${partes[1]}-${partes[0]}`;
 }
 
-function limpiarNumeroTexto(valor: string): string {
-  return valor.trim().replace(",", ".");
-}
-
-function convertirNumeroOpcional(
+function convertirNumeroConSigno(
   valor: string
 ): number | null {
-  const texto = limpiarNumeroTexto(valor);
+  const texto = valor.trim().replace(",", ".");
 
   if (!texto) {
     return null;
@@ -158,26 +150,55 @@ function convertirNumeroOpcional(
   return numero;
 }
 
-function tieneSignoExplicito(valor: string): boolean {
-  return /^[+-](?:\d+(?:[.,]\d+)?)$/.test(
+function tieneSignoExplicito(
+  valor: string
+): boolean {
+  return /^[+-]\d+(?:[.,]\d+)?$/.test(
     valor.trim()
   );
 }
 
-function obtenerPartesRxOriginal(
+function validarDioptria(
+  valor: string,
+  campo: string
+): string | null {
+  const texto = valor.trim();
+
+  if (!texto) {
+    return null;
+  }
+
+  if (!tieneSignoExplicito(texto)) {
+    return `${campo} debe comenzar explícitamente con + o -. Ejemplo: +1.00 o -1.00.`;
+  }
+
+  const numero = convertirNumeroConSigno(texto);
+
+  if (numero === null) {
+    return `${campo} no contiene un número válido.`;
+  }
+
+  return null;
+}
+
+function extraerComponentesRxOriginal(
   valor: string | null
 ): {
   esfera: string;
   cilindro: string;
   eje: string;
 } {
-  const original = String(valor || "").trim();
+  const texto = String(valor ?? "").trim();
 
-  if (!original) {
-    return { esfera: "", cilindro: "", eje: "" };
+  if (!texto) {
+    return {
+      esfera: "",
+      cilindro: "",
+      eje: ""
+    };
   }
 
-  const completa = original.match(
+  const completa = texto.match(
     /^\s*([+-]\d+(?:[.,]\d+)?)\s+([+-]\d+(?:[.,]\d+)?)°(\d{1,3})\s*$/
   );
 
@@ -189,68 +210,116 @@ function obtenerPartesRxOriginal(
     };
   }
 
-  const simple = original.match(
+  const simple = texto.match(
     /^\s*([+-]\d+(?:[.,]\d+)?)\s*$/
   );
 
   if (simple) {
-    return { esfera: simple[1], cilindro: "", eje: "" };
+    return {
+      esfera: simple[1],
+      cilindro: "",
+      eje: ""
+    };
   }
 
-  return { esfera: "", cilindro: "", eje: "" };
+  return {
+    esfera: "",
+    cilindro: "",
+    eje: ""
+  };
 }
 
-function valorDioParaEditar(
-  valorNumerico: number | null,
+function valorParaEdicion(
+  valor: number | null,
   original: string | null,
-  parte: "esfera" | "cilindro"
+  componente: "esfera" | "cilindro"
 ): string {
-  const partes = obtenerPartesRxOriginal(original);
+  const partes = extraerComponentesRxOriginal(original);
 
-  if (partes[parte]) {
-    return partes[parte];
+  if (componente === "esfera" && partes.esfera) {
+    return partes.esfera;
   }
 
-  // Un negativo almacenado en numeric es inequívocamente negativo.
-  // Un positivo/0 no revela si originalmente se escribió con + o sin signo,
-  // por lo que se deja vacío y obliga a reingresarlo explícitamente.
-  if (valorNumerico !== null && valorNumerico < 0) {
-    return String(valorNumerico);
+  if (componente === "cilindro" && partes.cilindro) {
+    return partes.cilindro;
+  }
+
+  if (valor === null || valor === undefined) {
+    return "";
+  }
+
+  // Un número negativo conserva su signo matemáticamente.
+  // Para valores 0 o positivos cuyo signo original no está disponible,
+  // no inventamos "+": obligamos a que el usuario lo ingrese explícitamente.
+  if (valor < 0) {
+    return String(valor);
   }
 
   return "";
 }
 
-function formatearDioptriaListado(
-  valorNumerico: number | null,
-  original: string | null,
-  parte: "esfera" | "cilindro"
-): string {
-  const partes = obtenerPartesRxOriginal(original);
+function construirRxOriginal(
+  esfera: string,
+  cilindro: string,
+  eje: string
+): string | null {
+  const e = esfera.trim();
+  const c = cilindro.trim();
+  const a = eje.trim();
 
-  if (partes[parte]) {
-    return partes[parte];
+  if (!e && !c) {
+    return null;
   }
 
-  if (valorNumerico === null || valorNumerico === undefined) {
+  if (c) {
+    return a
+      ? `${e} ${c}°${a}`
+      : `${e} ${c}`;
+  }
+
+  return e;
+}
+
+function mostrarDioptriaListado(
+  valor: number | null,
+  original: string | null,
+  componente: "esfera" | "cilindro"
+): string {
+  const partes = extraerComponentesRxOriginal(original);
+
+  if (
+    componente === "esfera" &&
+    partes.esfera
+  ) {
+    return partes.esfera;
+  }
+
+  if (
+    componente === "cilindro" &&
+    partes.cilindro
+  ) {
+    return partes.cilindro;
+  }
+
+  if (valor === null || valor === undefined) {
     return "-";
   }
 
-  if (valorNumerico < 0) {
-    return String(valorNumerico);
+  if (valor < 0) {
+    return String(valor);
   }
 
   return "Signo no registrado";
 }
 
-function valorAdicionParaEditar(
-  valor: string | null
+function formatearEjeListado(
+  valor: number | null
 ): string {
-  const texto = String(valor || "").trim();
+  if (valor === null || valor === undefined) {
+    return "-";
+  }
 
-  return tieneSignoExplicito(texto)
-    ? texto
-    : "";
+  return `${valor}°`;
 }
 
 function Recetas() {
@@ -272,10 +341,25 @@ function Recetas() {
     setPacienteBusqueda
   ] = useState("");
 
+  const [pacientesBusqueda, setPacientesBusqueda] =
+    useState<Paciente[]>([]);
+
+  const [buscandoPacientes, setBuscandoPacientes] =
+    useState(false);
+
   const [
     busquedaListado,
     setBusquedaListado
   ] = useState("");
+
+  const [paginaRecetas, setPaginaRecetas] =
+    useState(1);
+
+  const [porPaginaRecetas, setPorPaginaRecetas] =
+    useState(25);
+
+  const [totalRecetas, setTotalRecetas] =
+    useState(0);
 
   const [
     recetaEditando,
@@ -295,73 +379,159 @@ function Recetas() {
     useState("");
 
   useEffect(() => {
-    cargarDatos();
-  }, []);
+    void cargarDatos(paginaRecetas);
+  }, [paginaRecetas, porPaginaRecetas, busquedaListado]);
 
-  async function cargarDatos() {
+  useEffect(() => {
+    const texto = pacienteBusqueda.trim();
+
+    if (!texto) {
+      setPacientesBusqueda([]);
+      setBuscandoPacientes(false);
+      return;
+    }
+
+    const temporizador = window.setTimeout(() => {
+      void buscarPacientes(texto);
+    }, 300);
+
+    return () => {
+      window.clearTimeout(temporizador);
+    };
+  }, [pacienteBusqueda]);
+
+  async function buscarPacientes(texto: string) {
+    setBuscandoPacientes(true);
+
+    const textoSeguro = texto.trim();
+
+    if (!textoSeguro) {
+      setPacientesBusqueda([]);
+      setBuscandoPacientes(false);
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("pacientes")
+      .select("id, ficha, rut, nombres, apellidos")
+      .or(
+        `nombres.ilike.%${textoSeguro}%,apellidos.ilike.%${textoSeguro}%,rut.ilike.%${textoSeguro}%,ficha.ilike.%${textoSeguro}%`
+      )
+      .order("nombres", { ascending: true })
+      .order("apellidos", { ascending: true })
+      .limit(25);
+
+    if (error) {
+      console.error("Error buscando pacientes:", error);
+      setErrorMensaje(
+        "No se pudieron buscar pacientes: " + error.message
+      );
+      setPacientesBusqueda([]);
+      setBuscandoPacientes(false);
+      return;
+    }
+
+    const encontrados = (data ?? []) as Paciente[];
+    setPacientesBusqueda(encontrados);
+
+    setPacientes((actuales) => {
+      const mapa = new Map<number, Paciente>();
+
+      actuales.forEach((paciente) => mapa.set(paciente.id, paciente));
+      encontrados.forEach((paciente) => mapa.set(paciente.id, paciente));
+
+      return Array.from(mapa.values());
+    });
+
+    setBuscandoPacientes(false);
+  }
+
+  async function cargarDatos(pagina = paginaRecetas) {
     setCargando(true);
 
-    const [
-      resultadoPacientes,
-      resultadoRecetas
-    ] = await Promise.all([
-      supabase
-        .from("pacientes")
-        .select(
-          "id, ficha, rut, rut_titular, nombres, apellidos"
-        )
-        .order("nombres", {
-          ascending: true
-        })
-        .order("apellidos", {
-          ascending: true
-        }),
+    const desde = (pagina - 1) * porPaginaRecetas;
+    const hasta = desde + porPaginaRecetas - 1;
+    const textoBusqueda = busquedaListado.trim();
 
-      supabase
-        .from("recetas")
-        .select("*")
-        .order("fecha_receta", {
-          ascending: false
-        })
-        .order("id", {
-          ascending: false
-        })
-    ]);
+    let consultaRecetas = supabase
+      .from("recetas")
+      .select("*", { count: "exact" })
+      .order("fecha_receta", { ascending: false })
+      .order("id", { ascending: false });
 
-    if (resultadoPacientes.error) {
-      console.error(
-        "Error cargando pacientes:",
-        resultadoPacientes.error
-      );
-
-      setErrorMensaje(
-        "No se pudieron cargar los pacientes: " +
-          resultadoPacientes.error.message
-      );
-    } else {
-      setPacientes(
-        resultadoPacientes.data || []
+    if (textoBusqueda) {
+      consultaRecetas = consultaRecetas.ilike(
+        "numero_formula",
+        `%${textoBusqueda}%`
       );
     }
 
-    if (resultadoRecetas.error) {
-      console.error(
-        "Error cargando recetas:",
-        resultadoRecetas.error
-      );
+    const { data: recetasData, error: recetasError, count } =
+      await consultaRecetas.range(desde, hasta);
 
+    if (recetasError) {
+      console.error("Error cargando recetas:", recetasError);
       setErrorMensaje(
-        "No se pudieron cargar las recetas: " +
-          resultadoRecetas.error.message
+        "No se pudieron cargar las recetas: " + recetasError.message
       );
-    } else {
-      setRecetas(
-        resultadoRecetas.data || []
-      );
+      setRecetas([]);
+      setTotalRecetas(0);
+      setCargando(false);
+      return;
+    }
+
+    const recetasPagina = (recetasData ?? []) as Receta[];
+    setRecetas(recetasPagina);
+    setTotalRecetas(count ?? 0);
+    setPaginaRecetas(pagina);
+
+    const idsPacientes = Array.from(
+      new Set(
+        recetasPagina
+          .map((receta) => receta.paciente_id)
+          .filter((id): id is number =>
+            typeof id === "number" && Number.isFinite(id)
+          )
+      )
+    );
+
+    if (idsPacientes.length > 0) {
+      const { data: pacientesData, error: pacientesError } =
+        await supabase
+          .from("pacientes")
+          .select("id, ficha, rut, nombres, apellidos")
+          .in("id", idsPacientes);
+
+      if (pacientesError) {
+        console.error(
+          "Error cargando pacientes de recetas:",
+          pacientesError
+        );
+        setErrorMensaje(
+          "No se pudieron cargar los pacientes de las recetas: " +
+            pacientesError.message
+        );
+      } else {
+        setPacientes((actuales) => {
+          const mapa = new Map<number, Paciente>();
+
+          actuales.forEach((paciente) => mapa.set(paciente.id, paciente));
+          (pacientesData ?? []).forEach((paciente) => {
+            mapa.set(paciente.id, paciente as Paciente);
+          });
+
+          return Array.from(mapa.values());
+        });
+      }
     }
 
     setCargando(false);
   }
+
+  const totalPaginas = Math.max(
+    1,
+    Math.ceil(totalRecetas / porPaginaRecetas)
+  );
 
   function actualizarCampo(
     campo: keyof FormularioReceta,
@@ -401,101 +571,21 @@ function Recetas() {
     }`.trim();
   }
 
-  const pacientesFiltrados = useMemo(() => {
-    const texto =
-      pacienteBusqueda
-        .trim()
-        .toLowerCase();
+  const pacientesOpciones = (() => {
+    const mapa = new Map<number, Paciente>();
 
-    if (!texto) {
-      return pacientes;
+    pacientesBusqueda.forEach((paciente) => mapa.set(paciente.id, paciente));
+
+    const pacienteSeleccionado = obtenerPaciente(
+      formulario.paciente_id ? Number(formulario.paciente_id) : null
+    );
+
+    if (pacienteSeleccionado) {
+      mapa.set(pacienteSeleccionado.id, pacienteSeleccionado);
     }
 
-    return pacientes.filter(
-      (paciente) => {
-        const nombre =
-          `${paciente.nombres} ${
-            paciente.apellidos || ""
-          }`.toLowerCase();
-
-        const rut =
-          (
-            paciente.rut || ""
-          ).toLowerCase();
-
-        const rutTitular =
-          (
-            paciente.rut_titular || ""
-          ).toLowerCase();
-
-        const ficha =
-          (
-            paciente.ficha || ""
-          ).toLowerCase();
-
-        return (
-          nombre.includes(texto) ||
-          rut.includes(texto) ||
-          rutTitular.includes(texto) ||
-          ficha.includes(texto)
-        );
-      }
-    );
-  }, [
-    pacientes,
-    pacienteBusqueda
-  ]);
-
-  const recetasFiltradas = useMemo(() => {
-    const texto =
-      busquedaListado
-        .trim()
-        .toLowerCase();
-
-    if (!texto) {
-      return recetas;
-    }
-
-    return recetas.filter(
-      (receta) => {
-        const paciente =
-          obtenerPaciente(
-            receta.paciente_id
-          );
-
-        const nombre =
-          obtenerNombrePaciente(
-            receta.paciente_id
-          ).toLowerCase();
-
-        const rut =
-          (
-            paciente?.rut || ""
-          ).toLowerCase();
-
-        const ficha =
-          (
-            paciente?.ficha || ""
-          ).toLowerCase();
-
-        const numeroFormula =
-          (
-            receta.numero_formula || ""
-          ).toLowerCase();
-
-        return (
-          nombre.includes(texto) ||
-          rut.includes(texto) ||
-          ficha.includes(texto) ||
-          numeroFormula.includes(texto)
-        );
-      }
-    );
-  }, [
-    recetas,
-    busquedaListado,
-    pacientes
-  ]);
+    return Array.from(mapa.values());
+  })();
 
   function seleccionarPaciente(
     pacienteId: string
@@ -506,16 +596,24 @@ function Recetas() {
     );
 
     const paciente =
+      pacientesBusqueda.find(
+        (item) => item.id === Number(pacienteId)
+      ) ||
       pacientes.find(
-        (item) =>
-          item.id === Number(pacienteId)
+        (item) => item.id === Number(pacienteId)
       );
 
     if (paciente) {
+      setPacientes((actuales) => {
+        if (actuales.some((item) => item.id === paciente.id)) {
+          return actuales;
+        }
+
+        return [...actuales, paciente];
+      });
+
       setPacienteBusqueda(
-        `${paciente.nombres} ${
-          paciente.apellidos || ""
-        }`.trim()
+        `${paciente.nombres} ${paciente.apellidos || ""}`.trim()
       );
     }
   }
@@ -529,6 +627,7 @@ function Recetas() {
     });
 
     setPacienteBusqueda("");
+    setPacientesBusqueda([]);
     setRecetaEditando(null);
 
     if (limpiarMensajes) {
@@ -580,56 +679,52 @@ function Recetas() {
       motivo_receta:
         receta.motivo_receta || "",
 
-      esfera_od:
-        valorDioParaEditar(
-          receta.esfera_od,
-          receta.rx_od_original,
-          "esfera"
-        ),
+      esfera_od: valorParaEdicion(
+        receta.esfera_od,
+        receta.rx_od_original,
+        "esfera"
+      ),
 
-      cilindro_od:
-        valorDioParaEditar(
-          receta.cilindro_od,
-          receta.rx_od_original,
-          "cilindro"
-        ),
+      cilindro_od: valorParaEdicion(
+        receta.cilindro_od,
+        receta.rx_od_original,
+        "cilindro"
+      ),
 
       eje_od:
         receta.eje_od !== null
           ? String(receta.eje_od)
-          : "",
+          : extraerComponentesRxOriginal(
+              receta.rx_od_original
+            ).eje,
 
       adicion_od:
-        valorAdicionParaEditar(
-          receta.adicion_od
-        ),
+        receta.adicion_od || "",
 
       agudeza_visual_od:
         receta.agudeza_visual_od || "",
 
-      esfera_oi:
-        valorDioParaEditar(
-          receta.esfera_oi,
-          receta.rx_oi_original,
-          "esfera"
-        ),
+      esfera_oi: valorParaEdicion(
+        receta.esfera_oi,
+        receta.rx_oi_original,
+        "esfera"
+      ),
 
-      cilindro_oi:
-        valorDioParaEditar(
-          receta.cilindro_oi,
-          receta.rx_oi_original,
-          "cilindro"
-        ),
+      cilindro_oi: valorParaEdicion(
+        receta.cilindro_oi,
+        receta.rx_oi_original,
+        "cilindro"
+      ),
 
       eje_oi:
         receta.eje_oi !== null
           ? String(receta.eje_oi)
-          : "",
+          : extraerComponentesRxOriginal(
+              receta.rx_oi_original
+            ).eje,
 
       adicion_oi:
-        valorAdicionParaEditar(
-          receta.adicion_oi
-        ),
+        receta.adicion_oi || "",
 
       agudeza_visual_oi:
         receta.agudeza_visual_oi || "",
@@ -681,62 +776,95 @@ function Recetas() {
       return;
     }
 
-    const camposDioptricos = [
-      { nombre: "Esfera OD", valor: formulario.esfera_od },
-      { nombre: "Cilindro OD", valor: formulario.cilindro_od },
-      { nombre: "Adición OD", valor: formulario.adicion_od },
-      { nombre: "Esfera OI", valor: formulario.esfera_oi },
-      { nombre: "Cilindro OI", valor: formulario.cilindro_oi },
-      { nombre: "Adición OI", valor: formulario.adicion_oi }
-    ];
+    const errorEsferaOD = validarDioptria(
+      formulario.esfera_od,
+      "La esfera OD"
+    );
 
-    for (const campo of camposDioptricos) {
-      if (campo.valor.trim() && !tieneSignoExplicito(campo.valor)) {
-        setErrorMensaje(
-          `${campo.nombre}: debes escribir el signo + o - explícitamente. Ejemplo: +1.00 o -1.00.`
-        );
-        return;
-      }
-    }
-
-    const esferaOD = convertirNumeroOpcional(formulario.esfera_od);
-    const cilindroOD = convertirNumeroOpcional(formulario.cilindro_od);
-    const ejeOD = convertirNumeroOpcional(formulario.eje_od);
-    const esferaOI = convertirNumeroOpcional(formulario.esfera_oi);
-    const cilindroOI = convertirNumeroOpcional(formulario.cilindro_oi);
-    const ejeOI = convertirNumeroOpcional(formulario.eje_oi);
-
-    if (
-      formulario.esfera_od.trim() &&
-      esferaOD === null
-    ) {
-      setErrorMensaje("La esfera OD no contiene un número válido.");
+    if (errorEsferaOD) {
+      setErrorMensaje(errorEsferaOD);
       return;
     }
 
-    if (
-      formulario.cilindro_od.trim() &&
-      cilindroOD === null
-    ) {
-      setErrorMensaje("El cilindro OD no contiene un número válido.");
+    const errorCilindroOD = validarDioptria(
+      formulario.cilindro_od,
+      "El cilindro OD"
+    );
+
+    if (errorCilindroOD) {
+      setErrorMensaje(errorCilindroOD);
       return;
     }
 
-    if (
-      formulario.esfera_oi.trim() &&
-      esferaOI === null
-    ) {
-      setErrorMensaje("La esfera OI no contiene un número válido.");
+    const errorEsferaOI = validarDioptria(
+      formulario.esfera_oi,
+      "La esfera OI"
+    );
+
+    if (errorEsferaOI) {
+      setErrorMensaje(errorEsferaOI);
       return;
     }
 
-    if (
-      formulario.cilindro_oi.trim() &&
-      cilindroOI === null
-    ) {
-      setErrorMensaje("El cilindro OI no contiene un número válido.");
+    const errorCilindroOI = validarDioptria(
+      formulario.cilindro_oi,
+      "El cilindro OI"
+    );
+
+    if (errorCilindroOI) {
+      setErrorMensaje(errorCilindroOI);
       return;
     }
+
+    const errorAdicionOD = validarDioptria(
+      formulario.adicion_od,
+      "La adición OD"
+    );
+
+    if (errorAdicionOD) {
+      setErrorMensaje(errorAdicionOD);
+      return;
+    }
+
+    const errorAdicionOI = validarDioptria(
+      formulario.adicion_oi,
+      "La adición OI"
+    );
+
+    if (errorAdicionOI) {
+      setErrorMensaje(errorAdicionOI);
+      return;
+    }
+
+    const esferaOD =
+      convertirNumeroConSigno(
+        formulario.esfera_od
+      );
+
+    const cilindroOD =
+      convertirNumeroConSigno(
+        formulario.cilindro_od
+      );
+
+    const ejeOD =
+      convertirNumeroConSigno(
+        formulario.eje_od
+      );
+
+    const esferaOI =
+      convertirNumeroConSigno(
+        formulario.esfera_oi
+      );
+
+    const cilindroOI =
+      convertirNumeroConSigno(
+        formulario.cilindro_oi
+      );
+
+    const ejeOI =
+      convertirNumeroConSigno(
+        formulario.eje_oi
+      );
 
     if (
       formulario.eje_od.trim() &&
@@ -765,42 +893,6 @@ function Recetas() {
       setErrorMensaje(
         "El eje OI debe ser un número entero entre 0 y 180."
       );
-      return;
-    }
-
-    if (formulario.cilindro_od.trim() && !formulario.eje_od.trim()) {
-      setErrorMensaje("Si registras cilindro OD, debes indicar también el eje OD.");
-      return;
-    }
-
-    if (
-      (formulario.cilindro_od.trim() || formulario.eje_od.trim()) &&
-      !formulario.esfera_od.trim()
-    ) {
-      setErrorMensaje("Si registras cilindro o eje OD, debes indicar también la esfera OD con signo explícito. Ejemplo: +0.00.");
-      return;
-    }
-
-    if (!formulario.cilindro_od.trim() && formulario.eje_od.trim()) {
-      setErrorMensaje("El eje OD requiere un cilindro OD explícito.");
-      return;
-    }
-
-    if (formulario.cilindro_oi.trim() && !formulario.eje_oi.trim()) {
-      setErrorMensaje("Si registras cilindro OI, debes indicar también el eje OI.");
-      return;
-    }
-
-    if (
-      (formulario.cilindro_oi.trim() || formulario.eje_oi.trim()) &&
-      !formulario.esfera_oi.trim()
-    ) {
-      setErrorMensaje("Si registras cilindro o eje OI, debes indicar también la esfera OI con signo explícito. Ejemplo: +0.00.");
-      return;
-    }
-
-    if (!formulario.cilindro_oi.trim() && formulario.eje_oi.trim()) {
-      setErrorMensaje("El eje OI requiere un cilindro OI explícito.");
       return;
     }
 
@@ -842,16 +934,6 @@ function Recetas() {
           ? Math.trunc(ejeOD)
           : null,
 
-      rx_od_original:
-        [
-          formulario.esfera_od.trim(),
-          formulario.cilindro_od.trim()
-            ? `${formulario.cilindro_od.trim()}°${ejeOD !== null ? Math.trunc(ejeOD) : ""}`
-            : ""
-        ]
-          .filter(Boolean)
-          .join(" ") || null,
-
       adicion_od:
         formulario.adicion_od.trim() ||
         null,
@@ -868,16 +950,6 @@ function Recetas() {
         ejeOI !== null
           ? Math.trunc(ejeOI)
           : null,
-
-      rx_oi_original:
-        [
-          formulario.esfera_oi.trim(),
-          formulario.cilindro_oi.trim()
-            ? `${formulario.cilindro_oi.trim()}°${ejeOI !== null ? Math.trunc(ejeOI) : ""}`
-            : ""
-        ]
-          .filter(Boolean)
-          .join(" ") || null,
 
       adicion_oi:
         formulario.adicion_oi.trim() ||
@@ -906,6 +978,20 @@ function Recetas() {
       observaciones:
         formulario.observaciones.trim() ||
         null,
+
+      rx_od_original:
+        construirRxOriginal(
+          formulario.esfera_od,
+          formulario.cilindro_od,
+          formulario.eje_od
+        ),
+
+      rx_oi_original:
+        construirRxOriginal(
+          formulario.esfera_oi,
+          formulario.cilindro_oi,
+          formulario.eje_oi
+        ),
 
       fecha_actualizacion:
         new Date().toISOString()
@@ -960,7 +1046,8 @@ function Recetas() {
     setErrorMensaje("");
     setGuardando(false);
 
-    await cargarDatos();
+    setPaginaRecetas(1);
+    await cargarDatos(1);
   }
 
   async function eliminarReceta(
@@ -1024,7 +1111,18 @@ function Recetas() {
 
     setErrorMensaje("");
 
-    await cargarDatos();
+    const paginaObjetivo = Math.min(
+      paginaRecetas,
+      Math.max(
+        1,
+        Math.ceil(
+          Math.max(totalRecetas - 1, 0) /
+            porPaginaRecetas
+        )
+      )
+    );
+
+    await cargarDatos(paginaObjetivo);
   }
 
   return (
@@ -1307,9 +1405,59 @@ function Recetas() {
             text-align: center;
           }
 
+          .paciente-buscando,
+          .paciente-sin-resultados {
+            margin-top: 8px;
+            color: #777777;
+            font-size: 12px;
+          }
+
           .contador-recetas {
             color: #888888;
             font-size: 13px;
+          }
+
+          .paginacion-recetas {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            margin-top: 18px;
+            padding-top: 16px;
+            border-top: 1px solid #eeeeee;
+            flex-wrap: wrap;
+          }
+
+          .paginacion-grupo {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+          }
+
+          .paginacion-boton {
+            border: 1px solid #dddddd;
+            background: #ffffff;
+            color: #333333;
+            border-radius: 8px;
+            padding: 8px 11px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+          }
+
+          .paginacion-boton:disabled {
+            opacity: .45;
+            cursor: not-allowed;
+          }
+
+          .paginacion-select {
+            border: 1px solid #dddddd;
+            border-radius: 8px;
+            padding: 8px 10px;
+            background: #ffffff;
+            color: #333333;
+            font-size: 12px;
           }
 
           @media (max-width: 1100px) {
@@ -1369,8 +1517,7 @@ function Recetas() {
           </h2>
 
           <p className="recetas-descripcion">
-            Registra y administra la receta óptica
-            asociada al paciente.
+            Registra y administra la receta óptica asociada al paciente. Las dioptrías requieren signo explícito (+/-).
           </p>
 
           <form
@@ -1430,7 +1577,7 @@ function Recetas() {
                       Seleccionar paciente
                     </option>
 
-                    {pacientesFiltrados.map(
+                    {pacientesOpciones.map(
                       (paciente) => (
                         <option
                           key={
@@ -1447,7 +1594,6 @@ function Recetas() {
                             paciente.apellidos ||
                             ""
                           }
-                          {paciente.rut_titular ? ` · Titular ${paciente.rut_titular}` : ""}
                           {
                             paciente.ficha
                               ? ` · Ficha ${paciente.ficha}`
@@ -1458,6 +1604,20 @@ function Recetas() {
                     )}
 
                   </select>
+
+                  {buscandoPacientes && (
+                    <div className="paciente-buscando">
+                      Buscando pacientes...
+                    </div>
+                  )}
+
+                  {!buscandoPacientes &&
+                    pacienteBusqueda.trim() &&
+                    pacientesOpciones.length === 0 && (
+                      <div className="paciente-sin-resultados">
+                        No se encontraron pacientes con esa búsqueda.
+                      </div>
+                    )}
 
                   {formulario.paciente_id && (
                     <div className="paciente-seleccionado">
@@ -1702,7 +1862,7 @@ function Recetas() {
                 <div className="campo">
 
                   <label>
-                    Esfera · signo obligatorio (+ / -)
+                    Esfera
                   </label>
 
                   <input
@@ -1717,7 +1877,7 @@ function Recetas() {
                         event.target.value
                       )
                     }
-                    placeholder="Ej: +2.50 o -2.50"
+                    placeholder="+1.00 o -1.00"
                   />
 
                 </div>
@@ -1725,7 +1885,7 @@ function Recetas() {
                 <div className="campo">
 
                   <label>
-                    Cilindro · signo obligatorio (+ / -)
+                    Cilindro
                   </label>
 
                   <input
@@ -1740,7 +1900,7 @@ function Recetas() {
                         event.target.value
                       )
                     }
-                    placeholder="Ej: +0.75 o -0.75"
+                    placeholder="+0.50 o -0.50"
                   />
 
                 </div>
@@ -1773,7 +1933,7 @@ function Recetas() {
                 <div className="campo">
 
                   <label>
-                    Adición · signo obligatorio (+ / -)
+                    Adición
                   </label>
 
                   <input
@@ -1787,7 +1947,7 @@ function Recetas() {
                         event.target.value
                       )
                     }
-                    placeholder="Ej: +2.00 o -2.00"
+                    placeholder="+2.00 o -2.00"
                   />
 
                 </div>
@@ -1816,6 +1976,16 @@ function Recetas() {
 
               </div>
 
+              <div
+                style={{
+                  marginTop: "10px",
+                  color: "#777777",
+                  fontSize: "12px"
+                }}
+              >
+                Las dioptrías deben llevar signo explícito: +1.00 o -1.00. No se acepta un valor sin + o -.
+              </div>
+
             </div>
 
             {/* OI */}
@@ -1831,7 +2001,7 @@ function Recetas() {
                 <div className="campo">
 
                   <label>
-                    Esfera · signo obligatorio (+ / -)
+                    Esfera
                   </label>
 
                   <input
@@ -1846,7 +2016,7 @@ function Recetas() {
                         event.target.value
                       )
                     }
-                    placeholder="Ej: +2.25 o -2.25"
+                    placeholder="-2.25"
                   />
 
                 </div>
@@ -1854,7 +2024,7 @@ function Recetas() {
                 <div className="campo">
 
                   <label>
-                    Cilindro · signo obligatorio (+ / -)
+                    Cilindro
                   </label>
 
                   <input
@@ -1869,7 +2039,7 @@ function Recetas() {
                         event.target.value
                       )
                     }
-                    placeholder="Ej: +0.50 o -0.50"
+                    placeholder="-0.50"
                   />
 
                 </div>
@@ -1902,7 +2072,7 @@ function Recetas() {
                 <div className="campo">
 
                   <label>
-                    Adición · signo obligatorio (+ / -)
+                    Adición
                   </label>
 
                   <input
@@ -1916,7 +2086,7 @@ function Recetas() {
                         event.target.value
                       )
                     }
-                    placeholder="Ej: +2.00 o -2.00"
+                    placeholder="+2.00 o -2.00"
                   />
 
                 </div>
@@ -1943,6 +2113,16 @@ function Recetas() {
 
                 </div>
 
+              </div>
+
+              <div
+                style={{
+                  marginTop: "10px",
+                  color: "#777777",
+                  fontSize: "12px"
+                }}
+              >
+                Las dioptrías deben llevar signo explícito: +1.00 o -1.00. No se acepta un valor sin + o -.
               </div>
 
             </div>
@@ -2116,8 +2296,8 @@ function Recetas() {
             </h2>
 
             <span className="contador-recetas">
-              {recetasFiltradas.length}{" "}
-              {recetasFiltradas.length === 1
+              {totalRecetas}{" "}
+              {totalRecetas === 1
                 ? "receta"
                 : "recetas"}
             </span>
@@ -2136,12 +2316,11 @@ function Recetas() {
               value={
                 busquedaListado
               }
-              onChange={(event) =>
-                setBusquedaListado(
-                  event.target.value
-                )
-              }
-              placeholder="Buscar por paciente, RUT, ficha o número de fórmula..."
+              onChange={(event) => {
+                setBusquedaListado(event.target.value);
+                setPaginaRecetas(1);
+              }}
+              placeholder="Buscar por número de fórmula..."
             />
 
           </div>
@@ -2150,13 +2329,14 @@ function Recetas() {
             <div className="estado-vacio">
               Cargando recetas...
             </div>
-          ) : recetasFiltradas.length ===
+          ) : recetas.length ===
             0 ? (
             <div className="estado-vacio">
               No hay recetas registradas.
             </div>
           ) : (
-            <div className="tabla-scroll">
+            <>
+              <div className="tabla-scroll">
 
               <table className="tabla-recetas">
 
@@ -2206,7 +2386,7 @@ function Recetas() {
 
                 <tbody>
 
-                  {recetasFiltradas.map(
+                  {recetas.map(
                     (receta) => {
                       const paciente =
                         obtenerPaciente(
@@ -2271,35 +2451,39 @@ function Recetas() {
                           </td>
 
                           <td>
-                            {formatearDioptriaListado(
+                            {mostrarDioptriaListado(
                               receta.esfera_od,
                               receta.rx_od_original,
                               "esfera"
                             )}
                             {" / "}
-                            {formatearDioptriaListado(
+                            {mostrarDioptriaListado(
                               receta.cilindro_od,
                               receta.rx_od_original,
                               "cilindro"
                             )}
                             {" / "}
-                            {receta.eje_od !== null ? `${receta.eje_od}°` : "-"}
+                            {formatearEjeListado(
+                              receta.eje_od
+                            )}
                           </td>
 
                           <td>
-                            {formatearDioptriaListado(
+                            {mostrarDioptriaListado(
                               receta.esfera_oi,
                               receta.rx_oi_original,
                               "esfera"
                             )}
                             {" / "}
-                            {formatearDioptriaListado(
+                            {mostrarDioptriaListado(
                               receta.cilindro_oi,
                               receta.rx_oi_original,
                               "cilindro"
                             )}
                             {" / "}
-                            {receta.eje_oi !== null ? `${receta.eje_oi}°` : "-"}
+                            {formatearEjeListado(
+                              receta.eje_oi
+                            )}
                           </td>
 
                           <td>
@@ -2358,6 +2542,82 @@ function Recetas() {
               </table>
 
             </div>
+
+            <div className="paginacion-recetas">
+              <div className="paginacion-grupo">
+                <button
+                  type="button"
+                  className="paginacion-boton"
+                  onClick={() => setPaginaRecetas(1)}
+                  disabled={paginaRecetas <= 1 || cargando}
+                >
+                  « Primera
+                </button>
+
+                <button
+                  type="button"
+                  className="paginacion-boton"
+                  onClick={() =>
+                    setPaginaRecetas((actual) => Math.max(1, actual - 1))
+                  }
+                  disabled={paginaRecetas <= 1 || cargando}
+                >
+                  ‹ Anterior
+                </button>
+
+                <span className="contador-recetas">
+                  Página {paginaRecetas} de {totalPaginas}
+                </span>
+
+                <button
+                  type="button"
+                  className="paginacion-boton"
+                  onClick={() =>
+                    setPaginaRecetas((actual) =>
+                      Math.min(totalPaginas, actual + 1)
+                    )
+                  }
+                  disabled={paginaRecetas >= totalPaginas || cargando}
+                >
+                  Siguiente ›
+                </button>
+
+                <button
+                  type="button"
+                  className="paginacion-boton"
+                  onClick={() => setPaginaRecetas(totalPaginas)}
+                  disabled={paginaRecetas >= totalPaginas || cargando}
+                >
+                  Última »
+                </button>
+              </div>
+
+              <div className="paginacion-grupo">
+                <span className="contador-recetas">
+                  Mostrar
+                </span>
+
+                <select
+                  className="paginacion-select"
+                  value={porPaginaRecetas}
+                  onChange={(event) => {
+                    setPorPaginaRecetas(Number(event.target.value));
+                    setPaginaRecetas(1);
+                  }}
+                  disabled={cargando}
+                >
+                  <option value="10">10</option>
+                  <option value="25">25</option>
+                  <option value="50">50</option>
+                  <option value="100">100</option>
+                </select>
+
+                <span className="contador-recetas">
+                  por página
+                </span>
+              </div>
+              </div>
+            </>
           )}
 
         </div>
