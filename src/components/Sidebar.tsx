@@ -4,7 +4,24 @@ import { Link } from "react-router-dom";
 
 function Sidebar() {
   return (
-    <aside className="sidebar">
+    <aside
+      className="sidebar"
+      style={{
+        background: "#555555",
+        color: "#ffffff",
+        width: "260px",
+        minWidth: "260px",
+        height: "100vh",
+        minHeight: "100vh",
+        flex: "0 0 260px",
+        position: "sticky",
+        top: 0,
+        alignSelf: "flex-start",
+        overflowY: "auto",
+        overflowX: "hidden",
+        boxSizing: "border-box"
+      }}
+    >
       {/* LOGO */}
       <div className="logo-container">
         <img
