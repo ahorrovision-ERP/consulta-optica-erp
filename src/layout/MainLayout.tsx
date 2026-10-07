@@ -10,8 +10,12 @@ function MainLayout({ children }: Props) {
     <div
       style={{
         display: "flex",
-        minHeight: "100vh",
-        background: "#f5f7fb"
+        height: "100vh",
+        minHeight: 0,
+        width: "100%",
+        overflow: "hidden",
+        background: "#f5f7fb",
+        alignItems: "flex-start"
       }}
     >
       {/* Sidebar */}
@@ -21,8 +25,12 @@ function MainLayout({ children }: Props) {
       <main
         style={{
           flex: 1,
+          minWidth: 0,
+          minHeight: 0,
+          height: "100vh",
           padding: "35px",
           overflowY: "auto",
+          overflowX: "hidden",
           boxSizing: "border-box"
         }}
       >
