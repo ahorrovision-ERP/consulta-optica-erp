@@ -118,6 +118,35 @@ function separarRxOriginal(valor: string | null | undefined): {
   return { esfera: null, cilindro: null, eje: null, valida: false };
 }
 
+
+function mostrarDioptriaConservadora(
+  valorNumerico: number | null,
+  original: string | null | undefined,
+  componente: "esfera" | "cilindro"
+): string {
+  const rx = separarRxOriginal(original);
+
+  if (componente === "esfera" && rx.valida && rx.esfera) {
+    return rx.esfera;
+  }
+
+  if (componente === "cilindro" && rx.valida && rx.cilindro) {
+    return rx.cilindro;
+  }
+
+  // Un valor negativo almacenado como número conserva inequívocamente su signo.
+  // Para 0 o valores positivos sin RX original, no inventamos un "+".
+  if (valorNumerico !== null && valorNumerico < 0) {
+    return String(valorNumerico);
+  }
+
+  if (valorNumerico !== null) {
+    return "Signo original no registrado";
+  }
+
+  return "—";
+}
+
 function estiloBoton() {
   return {
     border: "1px solid #ddd",
@@ -205,29 +234,29 @@ function RecetasPaciente() {
     const rxOd = separarRxOriginal(receta.rx_od_original);
     const rxOi = separarRxOriginal(receta.rx_oi_original);
 
-    const odEsfera = rxOd.valida && rxOd.esfera
-      ? rxOd.esfera
-      : receta.esfera_od !== null
-        ? "Signo original no registrado"
-        : "—";
+    const odEsfera = mostrarDioptriaConservadora(
+      receta.esfera_od,
+      receta.rx_od_original,
+      "esfera"
+    );
 
-    const odCilindro = rxOd.valida && rxOd.cilindro
-      ? rxOd.cilindro
-      : receta.cilindro_od !== null
-        ? "Signo original no registrado"
-        : "—";
+    const odCilindro = mostrarDioptriaConservadora(
+      receta.cilindro_od,
+      receta.rx_od_original,
+      "cilindro"
+    );
 
-    const oiEsfera = rxOi.valida && rxOi.esfera
-      ? rxOi.esfera
-      : receta.esfera_oi !== null
-        ? "Signo original no registrado"
-        : "—";
+    const oiEsfera = mostrarDioptriaConservadora(
+      receta.esfera_oi,
+      receta.rx_oi_original,
+      "esfera"
+    );
 
-    const oiCilindro = rxOi.valida && rxOi.cilindro
-      ? rxOi.cilindro
-      : receta.cilindro_oi !== null
-        ? "Signo original no registrado"
-        : "—";
+    const oiCilindro = mostrarDioptriaConservadora(
+      receta.cilindro_oi,
+      receta.rx_oi_original,
+      "cilindro"
+    );
 
     const ventana = window.open("", "_blank", "width=900,height=700");
 
@@ -377,16 +406,16 @@ function RecetasPaciente() {
                       <tbody>
                         <tr>
                           <td style={tdReceta}>OD</td>
-                          <td style={tdReceta}>{od.valida && od.esfera ? od.esfera : receta.esfera_od !== null ? "Signo original no registrado" : "—"}</td>
-                          <td style={tdReceta}>{od.valida && od.cilindro ? od.cilindro : receta.cilindro_od !== null ? "Signo original no registrado" : "—"}</td>
+                          <td style={tdReceta}>{mostrarDioptriaConservadora(receta.esfera_od, receta.rx_od_original, "esfera")}</td>
+                          <td style={tdReceta}>{mostrarDioptriaConservadora(receta.cilindro_od, receta.rx_od_original, "cilindro")}</td>
                           <td style={tdReceta}>{od.valida && od.eje ? `${od.eje}°` : receta.eje_od !== null ? `${receta.eje_od}°` : "—"}</td>
                           <td style={tdReceta}>{receta.agudeza_visual_od || "—"}</td>
                         </tr>
 
                         <tr>
                           <td style={tdReceta}>OI</td>
-                          <td style={tdReceta}>{oi.valida && oi.esfera ? oi.esfera : receta.esfera_oi !== null ? "Signo original no registrado" : "—"}</td>
-                          <td style={tdReceta}>{oi.valida && oi.cilindro ? oi.cilindro : receta.cilindro_oi !== null ? "Signo original no registrado" : "—"}</td>
+                          <td style={tdReceta}>{mostrarDioptriaConservadora(receta.esfera_oi, receta.rx_oi_original, "esfera")}</td>
+                          <td style={tdReceta}>{mostrarDioptriaConservadora(receta.cilindro_oi, receta.rx_oi_original, "cilindro")}</td>
                           <td style={tdReceta}>{oi.valida && oi.eje ? `${oi.eje}°` : receta.eje_oi !== null ? `${receta.eje_oi}°` : "—"}</td>
                           <td style={tdReceta}>{receta.agudeza_visual_oi || "—"}</td>
                         </tr>
