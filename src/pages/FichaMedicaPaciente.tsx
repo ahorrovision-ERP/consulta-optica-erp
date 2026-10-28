@@ -266,6 +266,134 @@ function FichaMedicaPaciente() {
     return lineas.join("\n");
   }
 
+  function abrirVistaPreviaPDF() {
+    if (!paciente || cargando) return;
+
+    const elementoFicha = document.querySelector(".ficha-imprimible");
+    if (!(elementoFicha instanceof HTMLElement)) {
+      alert("No se encontró el contenido de la ficha para generar la vista previa.");
+      return;
+    }
+
+    // Abrir la ventana de forma directa desde el clic del usuario para evitar
+    // que el navegador bloquee la vista previa como ventana emergente.
+    const ventana = window.open("", "_blank", "width=1100,height=850");
+    if (!ventana) {
+      alert(
+        "El navegador bloqueó la vista previa. Permite las ventanas emergentes para este sitio y vuelve a pulsar Vista previa / PDF."
+      );
+      return;
+    }
+
+    const contenidoFicha = elementoFicha.outerHTML;
+
+    ventana.document.open();
+    ventana.document.write(`
+      <!doctype html>
+      <html lang="es">
+        <head>
+          <meta charset="utf-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
+          <title>Ficha médica - Ahorro Visión</title>
+          <style>
+            * { box-sizing: border-box; }
+            html, body { margin: 0; min-height: 100%; }
+            body {
+              background: #e9edf3;
+              color: #333;
+              font-family: Arial, Helvetica, sans-serif;
+            }
+            .preview-toolbar {
+              position: sticky;
+              top: 0;
+              z-index: 10;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              flex-wrap: wrap;
+              gap: 10px;
+              padding: 12px 16px;
+              background: #333;
+              color: #fff;
+              box-shadow: 0 2px 8px rgba(0,0,0,.18);
+            }
+            .preview-toolbar span {
+              margin-right: 8px;
+              font-size: 13px;
+            }
+            .preview-toolbar button {
+              border: 1px solid #ddd;
+              border-radius: 7px;
+              padding: 9px 13px;
+              background: #fff;
+              color: #333;
+              font-size: 13px;
+              font-weight: 700;
+              cursor: pointer;
+            }
+            .preview-toolbar .print-button {
+              border-color: #cc001f;
+              background: #cc001f;
+              color: #fff;
+            }
+            .preview-stage { padding: 24px 16px 40px; }
+            .ficha-imprimible {
+              width: 190mm !important;
+              max-width: calc(100vw - 32px) !important;
+              min-height: 250mm;
+              margin: 0 auto !important;
+              padding: 12mm !important;
+              border: 1px solid #ddd !important;
+              border-radius: 4px !important;
+              background: #fff !important;
+              box-shadow: 0 5px 24px rgba(0,0,0,.13) !important;
+            }
+            .ficha-seccion, .ficha-receta {
+              break-inside: avoid-page;
+              page-break-inside: avoid;
+            }
+            .ficha-imprimible h1 { font-size: 20px; }
+            .ficha-imprimible h2 { font-size: 15px; }
+            .ficha-imprimible p,
+            .ficha-imprimible div,
+            .ficha-imprimible td,
+            .ficha-imprimible th { overflow-wrap: anywhere; }
+            @page { size: A4 portrait; margin: 12mm; }
+            @media print {
+              html, body { width: auto; min-height: 0; background: #fff !important; }
+              .preview-toolbar { display: none !important; }
+              .preview-stage { padding: 0 !important; }
+              .ficha-imprimible {
+                width: 100% !important;
+                max-width: none !important;
+                min-height: 0 !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                border: 0 !important;
+                border-radius: 0 !important;
+                box-shadow: none !important;
+              }
+              .ficha-seccion, .ficha-receta {
+                box-shadow: none !important;
+                break-inside: avoid-page;
+                page-break-inside: avoid;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="preview-toolbar">
+            <span>Vista previa de la ficha médica · Ahorro Visión</span>
+            <button class="print-button" type="button" onclick="window.print()">Imprimir / Guardar PDF</button>
+            <button type="button" onclick="window.close()">Cerrar vista previa</button>
+          </div>
+          <div class="preview-stage">${contenidoFicha}</div>
+        </body>
+      </html>
+    `);
+    ventana.document.close();
+  }
+
   function prepararCorreo() {
     if (!paciente) return;
     const asunto = `Ficha médica óptica - ${nombre}`;
@@ -307,8 +435,8 @@ function FichaMedicaPaciente() {
           <Link to={id ? `/pacientes/${id}/recetas` : "/recetas"} style={enlaceBoton}>
             Ver historial de recetas
           </Link>
-          <button type="button" onClick={() => window.print()} style={botonPrimario} disabled={cargando || !paciente}>
-            🖨️ Imprimir / Guardar PDF
+          <button type="button" onClick={abrirVistaPreviaPDF} style={botonPrimario} disabled={cargando || !paciente}>
+            👁️ Vista previa / PDF
           </button>
           <button type="button" onClick={prepararCorreo} style={botonSecundario} disabled={cargando || !paciente}>
             ✉️ Preparar correo
