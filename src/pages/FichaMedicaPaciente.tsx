@@ -538,6 +538,15 @@ function Dato({ etiqueta, valor, destacado = false }: { etiqueta: string; valor:
   );
 }
 
+const caja = {
+  background: "#fff",
+  border: "1px solid #e5e5e5",
+  borderRadius: 14,
+  padding: 18,
+  boxShadow: "0 5px 18px rgba(0,0,0,.05)",
+  color: "#333",
+} as const;
+
 const barraAcciones = {
   display: "flex",
   alignItems: "center",
